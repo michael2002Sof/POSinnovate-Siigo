@@ -5,14 +5,15 @@ const CashService = {
     async CashSessionOpen (data) {
         try {
             const { sale_point, branch, opened_by, initial_cash, company } = data
+            const opened_at = moment().tz("America/Bogota").format("YYYY-MM-DD HH:mm:ss");
 
             // 1. Verificar si ya existe una sesión abierta HOY para este punto de venta
             const [existing] = await pool.query(
                 `SELECT id, opened_at, closed_at 
                  FROM cash_session 
                  WHERE sale_point = ? 
-                 AND DATE(opened_at) = CURDATE()`,
-                [sale_point]
+                 AND DATE(opened_at) = ?`,
+                [sale_point, opened_at]
             );
 
             if (existing.length > 0) {
@@ -21,18 +22,17 @@ const CashService = {
 
             // Registrar nueva sesión
             const [insert] = await pool.query(
-                `INSERT INTO cash_session (sale_point, branch, opened_by, initial_cash, company)
-                 VALUES (?, ?, ?, ?, ?)`,
-                [sale_point, branch, opened_by, initial_cash, company]
+                `INSERT INTO cash_session (sale_point, branch, opened_by, initial_cash, company, opened_at)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [sale_point, branch, opened_by, initial_cash, company, opened_at]
             )
 
             // Actualizar estado de la caja
-            const opened_at = moment().tz("America/Bogota").format("YYYY-MM-DD HH:mm:ss");
             await pool.query(
                 `UPDATE sale_point 
-                 SET status = 'open',  opened_at = ?
+                 SET status = ?, opened_at = ?
                  WHERE id = ?`,
-                [opened_at, sale_point]
+                ['open', opened_at, sale_point]
             )
             
             return { success: true, code: 201, message: "Caja abierta exitosamente.", data: { session: insert.insertId } }
@@ -60,9 +60,9 @@ const CashService = {
             // Actualizar estado de la caja
             await pool.query(
                 `UPDATE sale_point 
-                 SET status = 'closed',  closed_at = ?
+                 SET status = ?,  closed_at = ?
                  WHERE id = ?`,
-                [closed_at, sales_point]
+                ['closed', closed_at, sales_point]
             )
             
             return { code: 201, message: "Caja cerrada exitosamente."}

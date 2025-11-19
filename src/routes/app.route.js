@@ -55,6 +55,7 @@ route.post("/invoice/pos", InvoiceSiigoController.CreatePOS)
 route.get("/invoice/type/:company", InvoiceSiigoController.TypeInvoice)
 
 route.post("/creditnote", CreditNoteSiigoController.CreatePOS)
+route.get("/creditnote/by/:company/:date", CreditNoteSiigoController.ByDate)
 
 route.get("/payment/method/:company", PaymentSiigoController.method)
 

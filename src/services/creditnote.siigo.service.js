@@ -40,6 +40,7 @@ const CreditNoteSiigoService = {
     async CreatePOS (company) {
         try {
             const date = moment().tz("America/Bogota").format("YYYY-MM-DD");
+            const created_at = moment().tz("America/Bogota").format("YYYY-MM-DD HH:mm:ss");
 
             const client = await SiigoConfig.createClient(company)
             const response = await client.get(`credit-notes?created_start=${date}`)
@@ -90,8 +91,8 @@ const CreditNoteSiigoService = {
                         company, type, reference_invoice, code,
                         sale_point, cash_session, seller, customer,
                         subtotal, tax0, tax5, tax19, total,
-                        payment_method, reason
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        payment_method, reason, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         originalInvoice.company,
                         "credit-note",
@@ -107,7 +108,8 @@ const CreditNoteSiigoService = {
                         totals.tax19,
                         creditNote.total,
                         "cash",
-                        creditNote.reason
+                        creditNote.reason,
+                        created_at
                     ]
                 );
 
@@ -121,10 +123,11 @@ const CreditNoteSiigoService = {
 
                     await pool.query(
                         `INSERT INTO sale_invoice_item (
-                            invoice, product_name, quantity,
+                            company, invoice, product_name, quantity,
                             unit_price, tax0, tax5, tax19, total
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         [
+                            company,
                             creditId,
                             item.description,
                             -Math.abs(item.quantity),
@@ -146,8 +149,6 @@ const CreditNoteSiigoService = {
                 );
             }
 
-            console.log(response.data.results)
-
             return {code: 201, message: "Notas de Credito registradas en el POS"}
         } catch (error) {
             console.error("🔥 ERROR COMPLETO:", {
@@ -158,6 +159,57 @@ const CreditNoteSiigoService = {
                 values: error.values
             });
             return { code: 501, message: "ERROR: No se pudieron registrar las notas ", error: error.message}
+        }
+    },
+
+    async ByDate (company, date) {
+        try {
+            console.log("Filtros: ", company, date)
+            // Traer todas las notas de crédito
+            const [notes] = await pool.query(`
+                SELECT 
+                si.id,
+                si.code,
+                si.reference_invoice,
+                si.company,
+                si.sale_point,
+                si.cash_session,
+                si.seller,
+                si.customer,
+                si.subtotal,
+                si.tax0,
+                si.tax5,
+                si.tax19,
+                si.total,
+                si.reason,
+                si.status,
+                si.created_at,
+                si.updated_at,
+                sp.name AS sales_point_name,
+                u.name AS seller_name
+                FROM sale_invoice si
+                LEFT JOIN sale_point sp ON sp.id = si.sale_point
+                LEFT JOIN user u ON u.id = si.seller
+                WHERE si.type = ? AND si.company = ? AND DATE(si.created_at) = ?
+                ORDER BY si.created_at DESC
+            `, ['credit_note', company, date]);
+
+            // 🔹 Traer los items de cada nota
+            for (const note of notes) {
+                const [items] = await pool.query(
+                `SELECT product_name, product_barcode, quantity, unit_price, discount, tax0, tax5, tax19, total
+                FROM sales_invoice_item
+                WHERE invoice = ?`,
+                [note.id]
+                );
+                note.items = items;
+            }
+
+            return { code: 201, data: notes}
+
+            
+        } catch (error) {
+            return { code: 501, message: "Error no se pudieron traer las notas de credito", error: error.message}
         }
     }
 }

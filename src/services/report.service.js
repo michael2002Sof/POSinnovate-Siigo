@@ -64,8 +64,6 @@ const ReportService = {
     },
     async SalesByDate(date) {
         try {
-            // Normalizamos el formato de la fecha (YYYY-MM-DD)
-            const formattedDate = date.split('T')[0]; 
 
             // Consulta: busca sesiones de caja del día especificado
             const [rows] = await pool.query(
@@ -97,24 +95,13 @@ const ReportService = {
                 LEFT JOIN user u2 ON u2.id = cs.closed_by
                 WHERE DATE(cs.opened_at) = ?
                 ORDER BY cs.opened_at ASC`,
-            [formattedDate]
+            [date]
             );
 
-            return {
-            success: true,
-            code: 200,
-            message: `Sesiones encontradas para la fecha ${formattedDate}`,
-            data: rows
-            };
+            return { code: 200, data: rows };
 
         } catch (error) {
-            console.error("Error en SalesByDate:", error);
-            return {
-            success: false,
-            code: 500,
-            message: "Error al obtener las sesiones de caja por fecha",
-            error: error.message
-            };
+            return { code: 500, message: "Error al obtener las sesiones de caja por fecha", error: error.message };
         }
     },
 };

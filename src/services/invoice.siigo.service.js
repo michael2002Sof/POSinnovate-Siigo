@@ -33,19 +33,20 @@ const InvoiceSiigoService = {
             const {
                 company, code, sale_point, cash_session, seller,
                 client, subtotal, tax0, tax5, tax19, total,
-                payment_method, receipt, repay, invoiceItem
+                receipt_cash, receipt_transfer, total_payment, repay, 
+                invoiceItem
             } = data;
 
             // Insertar factura
             const [invoiceResult] = await pool.query(
                 `INSERT INTO sale_invoice 
                 (company, code, sale_point, cash_session, seller, customer,
-                subtotal, tax0, tax5, tax19, total, payment_method, receipt, repay)
+                subtotal, tax0, tax5, tax19, total, receipt_cash, receipt_transfer, total_payment, repay)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     company, code, sale_point, cash_session, seller, client,
-                    subtotal, tax0, tax5, tax19, total, payment_method,
-                    receipt, repay
+                    subtotal, tax0, tax5, tax19, total, receipt_cash,
+                    receipt_transfer, total_payment, repay
                 ]
             );
 
@@ -112,15 +113,15 @@ const InvoiceSiigoService = {
                 cc: customerCC,
                 address_client: customerAddress,
                 vendedor: sellerData.name,
-                invoiceItem,
                 subtotal,
                 descuento: 0,
                 tax0,
                 tax5,
                 tax19,
                 total,
-                method_payment: payment_method,
-                receipt,
+                receipt_cash,
+                receipt_transfer,
+                total_payment,
                 repay,
             };
 
