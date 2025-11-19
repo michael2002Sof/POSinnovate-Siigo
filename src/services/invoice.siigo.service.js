@@ -1,5 +1,6 @@
 import SiigoConfig from "../config/siigo.config.js";
 import { pool } from "../database/conexion.js";
+import moment from "moment-timezone";
 
 const InvoiceSiigoService = {
     async Create (data) {
@@ -10,17 +11,26 @@ const InvoiceSiigoService = {
 
             return { code: 201, message: "Factura creada en siigo", data: invoiceSiigo}
         } catch (error) {
-            console.log(" Error completo Siigo:");
-    
+            console.log("❌ Error completo Siigo:");
+
             if (error.response) {
-                console.log(" Status:", error.response.status);
-                console.log(" Headers:", error.response.headers);
-                console.log(" Data:", error.response.data); 
+                console.log("Status:", error.response.status);
+                console.log("Headers:", error.response.headers);
+                console.log("Data:", JSON.stringify(error.response.data, null, 2)); 
+            } else if (error.request) {
+                // La petición se hizo pero no hubo respuesta
+                console.log("No response received:", error.request);
             } else {
-                console.log(" Error sin response:", error.message);
+                console.log("Error en configuración:", error.message);
             }
-            return { code: 501, message: "ERROR: No se pudo crear la factura en siigo", error: error.message }
+            return { 
+                code: 501, 
+                message: "ERROR: No se pudo crear la factura en siigo", 
+                error: error.message,
+                details: error.response?.data || null
+            }
         }
+
     },
 
     async CreatePOS(data) {
@@ -36,17 +46,18 @@ const InvoiceSiigoService = {
                 receipt_cash, receipt_transfer, total_payment, repay, 
                 invoiceItem
             } = data;
+            const created_at = moment().tz("America/Bogota").format("YYYY-MM-DD HH:mm:ss");
 
             // Insertar factura
             const [invoiceResult] = await pool.query(
                 `INSERT INTO sale_invoice 
                 (company, code, sale_point, cash_session, seller, customer,
-                subtotal, tax0, tax5, tax19, total, receipt_cash, receipt_transfer, total_payment, repay)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                subtotal, tax0, tax5, tax19, total, receipt_cash, receipt_transfer, total_payment, repay, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     company, code, sale_point, cash_session, seller, client,
                     subtotal, tax0, tax5, tax19, total, receipt_cash,
-                    receipt_transfer, total_payment, repay
+                    receipt_transfer, total_payment, repay, created_at
                 ]
             );
 
@@ -86,6 +97,8 @@ const InvoiceSiigoService = {
             // Consultar cliente en Siigo UNA vez
             const clientAxios = await SiigoConfig.createClient(company);
             const { data: customer } = await clientAxios.get(`customers/${client}`);
+
+            console.log(customer)
 
             const customerName = customer?.name?.join(" ") || "Sin nombre";
             const customerCC = customer?.identification || "N/A";
