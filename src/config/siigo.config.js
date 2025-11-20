@@ -8,7 +8,7 @@ const tokenCache = new Map(); // Cache por empresa
 const SiigoConfig = {
 
     // ----------------------------------------------------
-    // 🔑 Obtener credenciales de la BD (por empresa)
+    // Obtener credenciales de la BD (por empresa)
     // ----------------------------------------------------
     async getCredentials(company) {
         const [rows] = await pool.query(
@@ -19,13 +19,13 @@ const SiigoConfig = {
     },
 
     // ----------------------------------------------------
-    // 🔑 Generar Token Siigo con cache
+    // Generar Token Siigo con cache
     // ----------------------------------------------------
     async getToken(company) {
         const cached = tokenCache.get(company);
 
         if (cached && cached.expires > new Date()) {
-            console.log(`♻️ Usando token en caché Siigo → Empresa ${company}`);
+            //console.log(`♻️ Usando token en caché Siigo → Empresa ${company}`);
             return cached.token;
         }
 
@@ -33,7 +33,7 @@ const SiigoConfig = {
         console.log(credentials)
         if (!credentials) throw new Error("No se encontraron credenciales de Siigo");
 
-        console.log(`🔐 Solicitando token Siigo → Empresa ${company}`);
+        //console.log(`🔐 Solicitando token Siigo → Empresa ${company}`);
 
         const { data } = await axios.post("https://api.siigo.com/auth", {
             username: credentials.email,
@@ -69,7 +69,7 @@ const SiigoConfig = {
     },
 
     // ----------------------------------------------------
-    // 🔄 GET paginado genérico
+    // GET paginado genérico
     // ----------------------------------------------------
     async Paginated(client, endpoint) {
         let page = 1;

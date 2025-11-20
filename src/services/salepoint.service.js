@@ -28,10 +28,10 @@ const SalesPointService = {
                     sp.warehouse,
                     sp.opened_at,
                     sp.closed_at,
-                    b.id AS id_branch,
-                    b.name AS branch,
-                    u.id AS id_user,
-                    u.name AS user
+                    b.id AS branch,
+                    b.name AS branch_name,
+                    u.id AS user,
+                    u.name AS user_name
                 FROM sale_point sp
                 INNER JOIN branch b ON sp.branch = b.id
                 INNER JOIN user u ON sp.seller = u.id
@@ -48,19 +48,13 @@ const SalesPointService = {
 
     async UpdateSalePoint (data) {
         try {
-            const {id, branch, user, name, status, opened_at, closed_at} = data
-            if (opened_at) {
-                await pool.query(
-                    "UPDATE sale_point SET branch = ?, user = ?, name = ?, status = ?, opened_at = ? WHERE id = ?",
-                    [branch, user, name, status, opened_at, id]
-                ) 
-            } else if (closed_at){
-                await pool.query(
-                    "UPDATE sale_point SET branch = ?, user = ?, name = ?, status = ?, closed_at = ? WHERE id = ?",
-                    [branch, user, name, status, closed_at, id]
-                ) 
-            }
-           
+            const {id, branch, user, name, warehouse} = data
+
+            await pool.query(
+                "UPDATE sale_point SET branch = ?, seller = ?, name = ?, warehouse = ? WHERE id = ?",
+                [branch, user, name, warehouse, id]
+            ) 
+
             return { success: true, code: 200, message: "Sucursal Actualizada con exito"}
         } catch (error) {
             return { success: false, code: 501, message: "Error: No se pudo actualizar la sucursal", error: error.message }

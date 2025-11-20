@@ -45,6 +45,7 @@ const CreditNoteSiigoService = {
             const client = await SiigoConfig.createClient(company)
             const response = await client.get(`credit-notes?created_start=${date}`)
             const creditNotes = response.data.results
+            //console.log(creditNotes)
 
             if (creditNotes.length === 0) {
                 return { code: 201, message: "No hay notas nuevas hoy." };
@@ -91,8 +92,8 @@ const CreditNoteSiigoService = {
                         company, type, reference_invoice, code,
                         sale_point, cash_session, seller, customer,
                         subtotal, tax0, tax5, tax19, total,
-                        payment_method, reason, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        receipt_cash, total_payment, reason, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         originalInvoice.company,
                         "credit-note",
@@ -103,11 +104,12 @@ const CreditNoteSiigoService = {
                         originalInvoice.seller,
                         originalInvoice.customer,
                         totals.subtotal,
-                        totals.tax0,
+                        0,
                         totals.tax5,
                         totals.tax19,
                         creditNote.total,
-                        "cash",
+                        creditNote.total,
+                        creditNote.total,
                         creditNote.reason,
                         created_at
                     ]
@@ -123,16 +125,17 @@ const CreditNoteSiigoService = {
 
                     await pool.query(
                         `INSERT INTO sale_invoice_item (
-                            company, invoice, product_name, quantity,
+                            company, invoice, product_name, product_barcode, quantity,
                             unit_price, tax0, tax5, tax19, total
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         [
-                            company,
+                            originalInvoice.company,
                             creditId,
                             item.description,
+                            item.code,
                             -Math.abs(item.quantity),
                             item.price,
-                            -Math.abs(taxes.tax0),
+                            0,
                             -Math.abs(taxes.tax5),
                             -Math.abs(taxes.tax19),
                             -Math.abs(item.total)
@@ -192,13 +195,13 @@ const CreditNoteSiigoService = {
                 LEFT JOIN user u ON u.id = si.seller
                 WHERE si.type = ? AND si.company = ? AND DATE(si.created_at) = ?
                 ORDER BY si.created_at DESC
-            `, ['credit_note', company, date]);
+            `, ['credit-note', company, date]);
 
             // 🔹 Traer los items de cada nota
             for (const note of notes) {
                 const [items] = await pool.query(
                 `SELECT product_name, product_barcode, quantity, unit_price, discount, tax0, tax5, tax19, total
-                FROM sales_invoice_item
+                FROM sale_invoice_item
                 WHERE invoice = ?`,
                 [note.id]
                 );

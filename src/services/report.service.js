@@ -97,6 +97,7 @@ const ReportService = {
                 ORDER BY cs.opened_at ASC`,
             [date]
             );
+            console.log(date)
 
             return { code: 200, data: rows };
 

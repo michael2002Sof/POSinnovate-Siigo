@@ -5,6 +5,7 @@ const CashService = {
     async CashSessionOpen (data) {
         try {
             const { sale_point, branch, opened_by, initial_cash, company } = data
+            console.log(data)
             const opened_at = moment().tz("America/Bogota").format("YYYY-MM-DD HH:mm:ss");
 
             // 1. Verificar si ya existe una sesión abierta HOY para este punto de venta

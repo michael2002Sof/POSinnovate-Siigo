@@ -72,7 +72,7 @@ const InvoiceSiigoService = {
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         invoiceId, company, item.product_name, item.product_barcode,
-                        item.quantity, item.unit_price, item.tax0, item.tax5,
+                        item.quantity, item.unit_price, 0, item.tax5,
                         item.tax19, item.total
                     ]
                 );
