@@ -1,4 +1,4 @@
-import InvoiceSiigoService from "../services/invoice.siigo.service.js"
+import InvoiceSiigoService from "../../services/sale/invoice.siigo.service.js"
 
 const InvoiceSiigoController = {
     async Create (req, res) {

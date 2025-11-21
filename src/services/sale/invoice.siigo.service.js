@@ -1,5 +1,5 @@
-import SiigoConfig from "../config/siigo.config.js";
-import { pool } from "../database/conexion.js";
+import SiigoConfig from "../../config/siigo.config.js";
+import { pool } from "../../database/conexion.js";
 import moment from "moment-timezone";
 
 const InvoiceSiigoService = {
@@ -8,8 +8,14 @@ const InvoiceSiigoService = {
             const client = await SiigoConfig.createClient(data.company)
             const response = await client.post("invoices", data)
             const invoiceSiigo = response.data
+            console.log("Facura inmediata", invoiceSiigo)
+            const invoiceId = invoiceSiigo.id;
 
-            return { code: 201, message: "Factura creada en siigo", data: invoiceSiigo}
+            // 2️⃣ Esperar CUFE usando polling
+            const invoiceWithCufe = await this.waitForCUFE(client, invoiceId);
+            console.log(invoiceWithCufe)
+
+            return { code: 201, message: "Factura creada en siigo", data: invoiceWithCufe}
         } catch (error) {
             console.log("❌ Error completo Siigo:");
 
@@ -33,6 +39,30 @@ const InvoiceSiigoService = {
 
     },
 
+      // 3️⃣ Método reusable para obtener el CUFE
+    async waitForCUFE(client, invoiceId) {
+        const maxAttempts = 10;   // ~ 30 segundos máximo
+        const delay = 3000;       // 3s entre intentos
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            console.log(`⏳ Esperando CUFE... intento ${attempt}/${maxAttempts}`);
+
+            const res = await client.get(`invoices/${invoiceId}`);
+            const invoice = res.data;
+
+            if (invoice.stamp?.status === "Accepted" && invoice.stamp?.cufe) {
+                console.log("✅ CUFE obtenido:", invoice.stamp.cufe);
+                return invoice;
+            }
+
+            // esperar antes del próximo intento
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        console.log("⚠ No se obtuvo CUFE dentro del tiempo esperado.");
+        return null;
+    },
+
     async CreatePOS(data) {
         try {
             // Validación mínima
@@ -43,7 +73,7 @@ const InvoiceSiigoService = {
             const {
                 company, code, sale_point, cash_session, seller,
                 client, subtotal, tax0, tax5, tax19, total,
-                receipt_cash, receipt_transfer, total_payment, repay, 
+                receipt_cash, receipt_transfer, total_payment, repay, cufe,
                 invoiceItem
             } = data;
             const created_at = moment().tz("America/Bogota").format("YYYY-MM-DD HH:mm:ss");
@@ -52,12 +82,12 @@ const InvoiceSiigoService = {
             const [invoiceResult] = await pool.query(
                 `INSERT INTO sale_invoice 
                 (company, code, sale_point, cash_session, seller, customer,
-                subtotal, tax0, tax5, tax19, total, receipt_cash, receipt_transfer, total_payment, repay, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                subtotal, tax0, tax5, tax19, total, receipt_cash, receipt_transfer, total_payment, repay, cufe, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     company, code, sale_point, cash_session, seller, client,
                     subtotal, tax0, tax5, tax19, total, receipt_cash,
-                    receipt_transfer, total_payment, repay, created_at
+                    receipt_transfer, total_payment, repay, cufe, created_at
                 ]
             );
 
@@ -98,8 +128,6 @@ const InvoiceSiigoService = {
             const clientAxios = await SiigoConfig.createClient(company);
             const { data: customer } = await clientAxios.get(`customers/${client}`);
 
-            console.log(customer)
-
             const customerName = customer?.name?.join(" ") || "Sin nombre";
             const customerCC = customer?.identification || "N/A";
             const customerAddress = customer?.address?.address || "Sin dirección";
@@ -136,6 +164,7 @@ const InvoiceSiigoService = {
                 receipt_transfer,
                 total_payment,
                 repay,
+                cufe,
             };
 
             return { code: 201, message: "Factura creada en POS", data: printData };

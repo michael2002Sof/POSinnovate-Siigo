@@ -1,4 +1,4 @@
-import {pool} from "../database/conexion.js"
+import {pool} from "../../database/conexion.js"
 import moment from "moment-timezone";
 
 const CashService = {
@@ -40,6 +40,26 @@ const CashService = {
             
         } catch (error) {
             return { success: false, code: 500, message: "Error al abrir la caja.", error: error.message }
+        }
+    },
+
+    async CashId (company, point) {
+        try {
+            const opened_at = moment().tz("America/Bogota").format("YYYY-MM-DD");
+            const [rows] = await pool.query (`
+                SELECT id 
+                FROM cash_session 
+                WHERE company = ? AND sale_point = ? AND DATE(opened_at) = ? AND status = ? LIMIT 1`,
+                [company, point, opened_at, 'in progress']
+            )
+
+            if (rows.length === 0) {
+                return { code: 404, message: "No existe una sesión de caja abierta hoy para este punto de venta." };
+            }
+
+            return { code: 201, data: rows[0].id}
+        } catch (error) {
+            return { code: 501, message: "ERROR: No se obtuvo el id de sesion", error: error.message}
         }
     },
 

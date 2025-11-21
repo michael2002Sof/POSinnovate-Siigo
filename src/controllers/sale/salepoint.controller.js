@@ -1,10 +1,10 @@
-import SalesPointService from "../services/salepoint.service.js";
+import SalesPointService from "../../services/sale/salepoint.service.js";
 
 const SalePointController = {
 
-    async RegisterSalePoint (req, res) {
+    async CreatePOS (req, res) {
         const data = req.body
-        const response = await SalesPointService.RegisterSalePoint(data)
+        const response = await SalesPointService.CreatePOS(data)
         return res.status(response.code).json(response)
     },
 

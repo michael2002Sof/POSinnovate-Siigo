@@ -92,8 +92,8 @@ const CreditNoteSiigoService = {
                         company, type, reference_invoice, code,
                         sale_point, cash_session, seller, customer,
                         subtotal, tax0, tax5, tax19, total,
-                        receipt_cash, total_payment, reason, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        receipt_cash, total_payment, reason, cufe, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         originalInvoice.company,
                         "credit-note",
@@ -111,6 +111,7 @@ const CreditNoteSiigoService = {
                         creditNote.total,
                         creditNote.total,
                         creditNote.reason,
+                        "No aplica",
                         created_at
                     ]
                 );
