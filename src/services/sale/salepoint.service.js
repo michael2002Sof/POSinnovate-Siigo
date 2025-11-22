@@ -1,4 +1,5 @@
 import { pool } from "../../database/conexion.js"
+import moment from "moment-timezone"
 
 const SalesPointService = {
     async CreatePOS (data) {
@@ -78,13 +79,23 @@ const SalesPointService = {
                 [salePointIDs, company]
             )
 
-            // Agregar methods: [{id, name}] a cada sale_point
+            // Aplicar formateo de fechas a cada sale_point y metodos
             const formatted = salesPoints.map(sp => ({
                 ...sp,
+
+                // Si existe fecha → convertirla. Si no → null.
+                opened_at: sp.opened_at 
+                    ? moment(sp.opened_at).tz("America/Bogota").format("YYYY-MM-DD hh:mm A")
+                    : null,
+
+                closed_at: sp.closed_at
+                    ? moment(sp.closed_at).tz("America/Bogota").format("YYYY-MM-DD hh:mm A")
+                    : null,
+
                 methods: methods
                     .filter(m => m.sale_point === sp.id)
                     .map(m => ({ id: m.id, name: m.name }))
-            }))
+            }));
 
             return { success: true, code: 200, message: "Roles obtenidos con éxito", data: formatted}
         } catch (error) {

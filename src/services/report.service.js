@@ -1,4 +1,5 @@
 import { pool } from "../database/conexion.js";
+import moment from "moment-timezone";
 
 const ReportService = {
     async SaleSessionById(id) {
@@ -99,7 +100,18 @@ const ReportService = {
             );
             console.log(date)
 
-            return { code: 200, data: rows };
+            // Convertir fechas a "America/Bogota" ANTES de enviarlas al frontend
+            const sesiones = rows.map(s => ({
+                ...s,
+                opened_at: s.opened_at 
+                    ? moment(s.opened_at).tz("America/Bogota").format("YYYY-MM-DD HH:mm A")
+                    : null,
+                closed_at: s.closed_at 
+                    ? moment(s.closed_at).tz("America/Bogota").format("YYYY-MM-DD HH:mm A")
+                    : null
+            }));
+
+            return { code: 200, data: sesiones };
 
         } catch (error) {
             return { code: 500, message: "Error al obtener las sesiones de caja por fecha", error: error.message };

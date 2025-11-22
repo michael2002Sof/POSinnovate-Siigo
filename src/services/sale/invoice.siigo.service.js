@@ -29,9 +29,32 @@ const InvoiceSiigoService = {
             } else {
                 console.log("Error en configuración:", error.message);
             }
+
+             // Detectar códigos comunes de Siigo
+            let userMessage = "ERROR: No se pudo crear la factura en Siigo.";
+
+            const status = error.response?.status;
+
+            switch (status) {
+                case 429:
+                    userMessage = "Siigo está recibiendo demasiadas peticiones. Espera unos segundos e inténtalo de nuevo.";
+                    break;
+
+                case 500:
+                case 502:
+                case 503:
+                case 504:
+                    userMessage = "Siigo está teniendo problemas en este momento. Inténtalo de nuevo más tarde.";
+                    break;
+
+                default:
+                    userMessage = "Error inesperado en Siigo. Inténtalo nuevamente.";
+                    break;
+            }
+
             return { 
                 code: 501, 
-                message: "ERROR: No se pudo crear la factura en siigo", 
+                message: userMessage, 
                 error: error.message,
                 details: error.response?.data || null
             }
@@ -148,8 +171,8 @@ const InvoiceSiigoService = {
                 cell: companyData.cell,
                 code,
                 caja: salePointData.name,
-                created_at: new Date(invoiceCreated.created_at).toLocaleString("es-CO"),
-                expire_at: new Date(invoiceCreated.created_at).toLocaleString("es-CO"),
+                created_at: moment(invoiceCreated.created_at).tz("America/Bogota").format("YYYY-MM-DD hh:mm A"),
+                expire_at: moment(invoiceCreated.created_at).tz("America/Bogota").format("YYYY-MM-DD hh:mm A"),
                 client: customerName,
                 cc: customerCC,
                 address_client: customerAddress,
