@@ -85,11 +85,11 @@ const SalesPointService = {
 
                 // Si existe fecha → convertirla. Si no → null.
                 opened_at: sp.opened_at 
-                    ? moment(sp.opened_at).tz("America/Bogota").format("YYYY-MM-DD hh:mm A")
+                    ? moment(sp.opened_at).format("YYYY-MM-DD hh:mm A")
                     : null,
 
                 closed_at: sp.closed_at
-                    ? moment(sp.closed_at).tz("America/Bogota").format("YYYY-MM-DD hh:mm A")
+                    ? moment(sp.closed_at).format("YYYY-MM-DD hh:mm A")
                     : null,
 
                 methods: methods

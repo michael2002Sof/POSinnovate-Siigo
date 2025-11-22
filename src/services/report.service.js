@@ -98,18 +98,19 @@ const ReportService = {
                 ORDER BY cs.opened_at ASC`,
             [date]
             );
-            console.log(date)
+            console.log(rows)
 
             // Convertir fechas a "America/Bogota" ANTES de enviarlas al frontend
             const sesiones = rows.map(s => ({
                 ...s,
                 opened_at: s.opened_at 
-                    ? moment(s.opened_at).tz("America/Bogota").format("YYYY-MM-DD HH:mm A")
+                    ? moment(s.opened_at).format("YYYY-MM-DD HH:mm A")
                     : null,
                 closed_at: s.closed_at 
-                    ? moment(s.closed_at).tz("America/Bogota").format("YYYY-MM-DD HH:mm A")
+                    ? moment(s.closed_at).format("YYYY-MM-DD HH:mm A")
                     : null
             }));
+
 
             return { code: 200, data: sesiones };
 
