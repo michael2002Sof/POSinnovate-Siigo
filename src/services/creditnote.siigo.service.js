@@ -9,14 +9,19 @@ function getTaxValues(item) {
     let tax0 = 0, tax5 = 0, tax19 = 0;
 
     const tax = item.taxes?.[0];
-    if (tax) {
-        if (tax.percentage === 0) tax0 = tax.amount;
-        if (tax.percentage === 5) tax5 = tax.amount;
-        if (tax.percentage === 19) tax19 = tax.amount;
-    }
+
+    if (!tax) return { tax0, tax5, tax19 };
+
+    const amount = Number(tax.value);
+    const percentage = Number(tax.percentage);
+
+    if (percentage === 0) tax0 = isNaN(amount) ? 0 : amount;
+    if (percentage === 5) tax5 = isNaN(amount) ? 0 : amount;
+    if (percentage === 19) tax19 = isNaN(amount) ? 0 : amount;
 
     return { tax0, tax5, tax19 };
 }
+
 
 /// -----------------------------------------------------------
 /// Calcula totales generales de la NC
@@ -36,6 +41,11 @@ function calculateTotals(items) {
     return { subtotal, tax0, tax5, tax19 };
 }
 
+function num(n) {
+    return (typeof n === "number" && !isNaN(n) && isFinite(n)) ? n : 0;
+}
+
+
 const CreditNoteSiigoService = {
     async CreatePOS (company) {
         try {
@@ -45,7 +55,7 @@ const CreditNoteSiigoService = {
             const client = await SiigoConfig.createClient(company)
             const response = await client.get(`credit-notes?created_start=${date}`)
             const creditNotes = response.data.results
-            //console.log(creditNotes)
+            //console.log("Notas de credito de siigo", creditNotes)
 
             if (creditNotes.length === 0) {
                 return { code: 201, message: "No hay notas nuevas hoy." };
@@ -103,13 +113,13 @@ const CreditNoteSiigoService = {
                         originalInvoice.cash_session,
                         originalInvoice.seller,
                         originalInvoice.customer,
-                        totals.subtotal,
-                        0,
-                        totals.tax5,
-                        totals.tax19,
-                        creditNote.total,
-                        creditNote.total,
-                        creditNote.total,
+                        num(totals.subtotal),
+                        num(totals.tax0),
+                        num(totals.tax5),
+                        num(totals.tax19),
+                        num(creditNote.total),
+                        num(creditNote.total),
+                        num(creditNote.total),
                         creditNote.reason,
                         "No aplica",
                         created_at

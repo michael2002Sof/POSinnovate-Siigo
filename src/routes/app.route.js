@@ -10,7 +10,6 @@ import ProductSiigoController from "../controllers/product.siigo.controller.js"
 import CustomerSiigoController from "../controllers/customer.siigo.controller.js"
 import UserSiigoController from "../controllers/user.siigo.controller.js"
 import AccountSiigoController from "../controllers/account.siigo.controller.js"
-import ReportController from "../controllers/report.controller.js"
 import CreditNoteSiigoController from "../controllers/creditnote.siigo.controller.js"
 
 
@@ -35,9 +34,6 @@ route.get("/user/pos/:company", UserSiigoController.allPOS)
 
 route.post("/branch", BranchController.Create)
 route.get("/branch/:company", BranchController.All)
-
-route.get("/report/by/:id", ReportController.SaleSessionById)
-route.get("/report/day/:date", ReportController.SalesByDate)
 
 route.get("/product/by/:company/:code", ProductSiigoController.ByCode)
 

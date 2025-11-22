@@ -1,4 +1,4 @@
-import { pool } from "../database/conexion.js";
+import { pool } from "../../database/conexion.js";
 import moment from "moment-timezone";
 
 const ReportService = {

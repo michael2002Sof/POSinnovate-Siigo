@@ -1,4 +1,4 @@
-import ReportService from "../services/report.service.js";
+import ReportService from "../../services/sale/report.service.js";
 
 export const ReportController = {
     async SaleSessionById (req, res) {

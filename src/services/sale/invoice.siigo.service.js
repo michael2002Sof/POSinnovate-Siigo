@@ -206,6 +206,7 @@ const InvoiceSiigoService = {
         try {
             const client = await SiigoConfig.createClient(company)
             const typeInvoice = await client.get("document-types?type=FV")
+            //console.log("Tipos de factura de siigo", typeInvoice.data)
 
             return { code: 201, data: typeInvoice.data}   
         } catch (error) {
