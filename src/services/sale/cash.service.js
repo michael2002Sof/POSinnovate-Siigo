@@ -7,6 +7,7 @@ const CashService = {
             const { sale_point, branch, opened_by, initial_cash, company } = data
             console.log(data)
             const opened_at = moment().tz("America/Bogota").format("YYYY-MM-DD HH:mm:ss");
+            const date_today = moment().tz("America/Bogota").format("YYYY-MM-DD");
 
             // 1. Verificar si ya existe una sesión abierta HOY para este punto de venta
             const [existing] = await pool.query(
@@ -14,7 +15,7 @@ const CashService = {
                  FROM cash_session 
                  WHERE sale_point = ? 
                  AND DATE(opened_at) = ?`,
-                [sale_point, opened_at]
+                [sale_point, date_today]
             );
 
             if (existing.length > 0) {

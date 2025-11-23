@@ -29,6 +29,7 @@ route.post("/invoice/pos", InvoiceSiigoController.CreatePOS)
 route.get("/invoice/type/:company", InvoiceSiigoController.TypeInvoice)
 
 route.get("/report/by/:id", ReportController.SaleSessionById)
-route.get("/report/day/:date", ReportController.SalesByDate)
+route.get("/report/day/:date/:company", ReportController.SessionByDate)
+route.get("/report/invoice/pos/by/:date/:company", ReportController.InvoiceByDate)
 
 export default route

@@ -1,4 +1,5 @@
 import { pool } from "../../database/conexion.js";
+import SiigoConfig from "../../config/siigo.config.js";
 import moment from "moment-timezone";
 
 const ReportService = {
@@ -17,53 +18,8 @@ const ReportService = {
             return { code: 501, message: "Error al obtener facturas", error: error.message }
         }
     },
-    async SaleInvoiceByCode(code) {
-        try {
-            console.log("codigo de la factura", code)
-            // 🔹 1. Buscar la factura principal
-            const [rows] = await pool.query(
-            `SELECT * FROM sales_invoice WHERE code = ? LIMIT 1`,
-            [code]
-            );
 
-            if (rows.length === 0) {
-            return { success: false, code: 404, message: "Factura no encontrada" };
-            }
-
-            const invoice = rows[0];
-
-             // 🔹 2. Buscar los ítems de esa factura (por ID)
-            const [itemsProduct] = await pool.query(
-            `SELECT 
-                id,
-                product_name,
-                product_barcode,
-                quantity,
-                unit_price,
-                discount,
-                tax0,
-                tax5,
-                tax19,
-                total
-                FROM sales_invoice_item
-                WHERE invoice = ?`,
-            [invoice.id]
-            );
-            
-            // 🔹 3. Unir datos de cabecera e ítems
-            const invoiceData = {
-            ...invoice,
-            itemsProduct,
-            };
-
-            return {success: true, code:201, data: invoiceData};
-    
-        } catch (error) {
-            console.error("Error al obtener facturas:", error);
-            return { code: 501, message: "Error al obtener facturas", error: error.message }
-        }
-    },
-    async SalesByDate(date) {
+    async SessionByDate(date, company) {
         try {
 
             // Consulta: busca sesiones de caja del día especificado
@@ -94,9 +50,9 @@ const ReportService = {
                 INNER JOIN user u1 ON u1.id = cs.opened_by
                 INNER JOIN branch b ON b.id = sp.branch
                 LEFT JOIN user u2 ON u2.id = cs.closed_by
-                WHERE DATE(cs.opened_at) = ?
+                WHERE DATE(cs.opened_at) = ? AND cs.company = ?
                 ORDER BY cs.opened_at ASC`,
-            [date]
+            [date, company]
             );
             console.log(rows)
 
@@ -118,6 +74,100 @@ const ReportService = {
             return { code: 500, message: "Error al obtener las sesiones de caja por fecha", error: error.message };
         }
     },
+
+    async InvoiceByDate(date, company) {
+        try {
+            console.log("Fecha recibida:", date, "Compañía:", company);
+
+            const [[companyData]] = await pool.query(
+                `SELECT name, nit, address, city, cell, logo FROM company WHERE id = ? LIMIT 1`,
+                [company]
+            );
+            console.log("Datos de la compañía:", companyData);
+
+            const [invoices] = await pool.query(
+                `SELECT * FROM sale_invoice WHERE company = ? AND DATE(created_at) = ? AND type = ? ORDER BY id ASC`,
+                [company, date, 'invoice']
+            ); 
+            if (invoices.length === 0) {
+                return { code: 200, data: [], message: "No hay facturas para la fecha indicada" };
+            }
+
+            const clientAxios = await SiigoConfig.createClient(company);
+            const result = [];
+            for (const inv of invoices) {
+
+                // 4.1 Obtener cliente de Siigo
+                let customerName = "Sin nombre";
+                let customerCC = "N/A";
+                let customerAddress = "Sin dirección";
+
+                try {
+                    const { data: customer } = await clientAxios.get(`customers/${inv.customer}`);
+                    customerName = customer?.name?.join(" ") || "Sin nombre";
+                    customerCC = customer?.identification || "N/A";
+                    customerAddress = customer?.address?.address || "Sin dirección";
+                } catch (err) {
+                    console.log("Cliente no encontrado en Siigo:", inv.customer);
+                }
+
+                // 4.2 Obtener info del punto de venta
+                const [[salePointData]] = await pool.query(
+                    `SELECT name FROM sale_point WHERE id = ? LIMIT 1`,
+                    [inv.sale_point]
+                );
+
+                // 4.3 Obtener vendedor
+                const [[sellerData]] = await pool.query(
+                    `SELECT name FROM user WHERE id = ? LIMIT 1`,
+                    [inv.seller]
+                );
+
+                // 4.4 Obtener items de la factura
+                const [items] = await pool.query(
+                    `SELECT product_name, product_barcode, quantity, unit_price, tax0, tax5, tax19, total
+                    FROM sale_invoice_item
+                    WHERE invoice = ?`,
+                    [inv.id]
+                );
+
+                // 4.5 Construir estructura EXACTA como CreatePOS
+                result.push({
+                    logo: companyData.logo,
+                    company: companyData.name,
+                    nit: companyData.nit,
+                    address: companyData.address,
+                    city: companyData.city,
+                    cell: companyData.cell,
+                    code: inv.code,
+                    caja: salePointData.name,
+                    created_at: moment(inv.created_at).format("YYYY-MM-DD hh:mm A"),
+                    expire_at: moment(inv.created_at).format("YYYY-MM-DD hh:mm A"),
+                    client: customerName,
+                    cc: customerCC,
+                    address_client: customerAddress,
+                    vendedor: sellerData.name,
+                    subtotal: inv.subtotal,
+                    descuento: 0,
+                    tax0: inv.tax0,
+                    tax5: inv.tax5,
+                    tax19: inv.tax19,
+                    total: inv.total,
+                    receipt_cash: inv.receipt_cash,
+                    receipt_transfer: inv.receipt_transfer,
+                    total_payment: inv.total_payment,
+                    repay: inv.repay,
+                    cufe: inv.cufe,
+                    status: inv.status,
+                    invoiceItem: items
+                });
+            }
+
+            return { code: 200, data: result };
+        } catch (error) {
+            return { code: 500, message: "Error al obtener las facturas por fecha", error: error.message };
+        }
+    }
 };
 
 export default ReportService;

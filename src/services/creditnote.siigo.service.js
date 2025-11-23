@@ -165,14 +165,50 @@ const CreditNoteSiigoService = {
 
             return {code: 201, message: "Notas de Credito registradas en el POS"}
         } catch (error) {
+
+            // Detectar código HTTP de Siigo
+            const status = error.response?.status;
+
+            let userMessage = "Siigo está presentando problemas técnicos. No reinicies la aplicación.";
+
+            switch (status) {
+
+                case 429:
+                    userMessage = 
+                        "Siigo está recibiendo demasiadas peticiones en este momento. " +
+                        "Tu solicitud fue recibida, pero Siigo está limitando el tráfico. " +
+                        "No reinicies el sistema. Espera unos segundos e inténtalo de nuevo.";
+                    break;
+
+                case 500:
+                case 502:
+                case 503:
+                case 504:
+                    userMessage =
+                        "Siigo está experimentando fallas en su servicio. " +
+                        "Tu sistema funciona correctamente. Solo debes esperar a que el servicio de Siigo se estabilice.";
+                    break;
+
+                default:
+                    userMessage = 
+                        "Ocurrió un error inesperado al comunicarse con Siigo. " +
+                        "Tu sistema está funcionando bien, es un problema del servicio de Siigo.";
+                    break;
+            }
+
             console.error("🔥 ERROR COMPLETO:", {
                 message: error.message,
                 stack: error.stack,
-                sqlMessage: error.sqlMessage,
-                sql: error.sql,
-                values: error.values
+                siigoStatus: status,
+                siigoResponse: error.response?.data,
             });
-            return { code: 501, message: "ERROR: No se pudieron registrar las notas ", error: error.message}
+
+            return {
+                code: 501,
+                message: userMessage,
+                error: error.message,
+                details: error.response?.data || null
+            };
         }
     },
 

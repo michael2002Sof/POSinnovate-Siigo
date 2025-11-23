@@ -6,16 +6,18 @@ export const ReportController = {
         const response = await ReportService.SaleSessionById(id)
         res.status(response.code).json(response)
     },
-    async SaleInvoiceByCode (req, res) {
-        const {code} = req.params
-        const response = await ReportService.SaleInvoiceByCode(code)
+
+    async SessionByDate (req, res) {
+        const {date, company} = req.params
+        const response = await ReportService.SessionByDate(date, company)
         res.status(response.code).json(response)
     },
-    async SalesByDate (req, res) {
-        const {date} = req.params
-        const response = await ReportService.SalesByDate(date)
+
+    async InvoiceByDate (req, res) {
+        const {date, company} = req.params
+        const response = await ReportService.InvoiceByDate(date, company)
         res.status(response.code).json(response)
-    },
+    }
 };
 
 export default ReportController;

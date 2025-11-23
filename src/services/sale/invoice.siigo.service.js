@@ -202,6 +202,7 @@ const InvoiceSiigoService = {
         }
     },
 
+
     async TypeInvoice (company) {
         try {
             const client = await SiigoConfig.createClient(company)
