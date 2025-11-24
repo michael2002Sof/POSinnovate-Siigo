@@ -1,4 +1,4 @@
-name: Deploy to Server
+name: Deploy Without VPN
 
 on:
   push:
@@ -10,42 +10,56 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up SSH key
+      - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to server
-        run: |
-          ssh -i ~/.ssh/id_ed25519 deploy@${{ secrets.SERVER_HOST }} << 'EOF'
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script_stop: true
+          script: |
+            APP_NAME="pos-siigo"
+            BASE_PATH="/home/deploy/github"
+            APP_PATH="$BASE_PATH/$APP_NAME"
+            REPO_URL="git@github.com:michael2002Sof/POSinnovate-Siigo.git"
 
-            PROJECT_DIR="/home/deploy/github/POSinnovate-Siigo"
+            echo "📁 Verificando carpeta del proyecto..."
+            if [ ! -d "$APP_PATH" ]; then
+              echo "⚠️ No existe → creando carpeta"
+              mkdir -p $APP_PATH
+            fi
 
-            echo "📌 Verificando existencia del proyecto..."
-            if [ -d "$PROJECT_DIR/.git" ]; then
-              echo "✔ El proyecto ya existe, haciendo git pull"
-              cd "$PROJECT_DIR"
-              git pull
+            cd $APP_PATH
+
+            echo "⬇️ Clonando/Actualizando repositorio..."
+            if [ ! -d ".git" ]; then
+              git clone $REPO_URL $APP_PATH
             else
-              echo "⬇ El proyecto NO existe, clonando repositorio..."
-              mkdir -p /home/deploy/github
-              cd /home/deploy/github
-              git clone git@github.com:michael2002Sof/POSinnovate-Siigo.git
-              cd POSinnovate-Siigo
+              git pull origin main
             fi
 
             echo "📦 Instalando dependencias..."
-            npm install --omit=dev
+            npm install
 
-            echo "⚡ Construyendo proyecto..."
-            npm run build
+            echo "🔍 Revisando PM2..."
+            pm2 describe $APP_NAME > /dev/null 2>&1
 
-            echo "🚀 Reiniciando servicio con PM2..."
-            pm2 restart pos-siigo || pm2 start dist/main.js --name pos-siigo
+            if [ $? -eq 0 ]; then
+              echo "♻️ Reiniciando app..."
+              pm2 restart $APP_NAME
+            else
+              echo "🚀 Iniciando app..."
+              pm2 start index.js --name $APP_NAME
+            fi
 
-          EOF
+            pm2 save
