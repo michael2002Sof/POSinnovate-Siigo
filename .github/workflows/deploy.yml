@@ -8,9 +8,14 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    environment: SSH_HOST
     steps:
-      - name: Checkout code
+      - name: Debug SSH_HOST
+        run: echo "SSH_HOST=(${SSH_HOST})"
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Configure SSH
@@ -18,8 +23,8 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+          
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1
         with:
