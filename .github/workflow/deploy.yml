@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: SSH_HOST
 
     steps:
       - name: Checkout code
@@ -23,6 +24,7 @@ jobs:
           script: |
             APP_NAME="pos-siigo"
             APP_PATH="/home/deploy/github/pos-siigo"
+            REPO_URL="https://github.com/michael2002Sof/POSinnovate-Siigo.git"
 
             echo "📁 Verificando carpeta del proyecto..."
             if [ ! -d "$APP_PATH" ]; then
@@ -36,7 +38,7 @@ jobs:
 
             echo "⬇️ Clonando/actualizando repositorio..."
             if [ ! -d ".git" ]; then
-              git clone https://github.com/TU-USUARIO/TU-REPO.git $APP_PATH
+              git clone $REPO_URL $APP_PATH
             else
               git pull origin main
             fi
