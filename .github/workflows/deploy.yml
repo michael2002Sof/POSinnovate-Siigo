@@ -24,7 +24,7 @@ jobs:
           echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
-          
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -38,33 +38,41 @@ jobs:
             APP_PATH="$BASE_PATH/$APP_NAME"
             REPO_URL="git@github.com:michael2002Sof/POSinnovate-Siigo.git"
 
-            echo "📁 Verificando carpeta del proyecto..."
+            echo "=========== 📁 Verificando carpeta ==========="
             if [ ! -d "$APP_PATH" ]; then
-              echo "⚠️ No existe → creando carpeta"
+              echo "⚠️ Carpeta no existe → creando..."
               mkdir -p $APP_PATH
+              echo "⬇️ Clonando repositorio..."
+              git clone $REPO_URL $APP_PATH
+            else
+              echo "📂 Carpeta existe"
+              cd $APP_PATH
+              if [ ! -d ".git" ]; then
+                echo "⚠️ No hay .git → clonando repo..."
+                git clone $REPO_URL $APP_PATH
+              else
+                echo "🔄 Repo detectado → ejecutando git pull..."
+                git pull origin main
+              fi
             fi
 
             cd $APP_PATH
 
-            echo "⬇️ Clonando/Actualizando repositorio..."
-            if [ ! -d ".git" ]; then
-              git clone $REPO_URL $APP_PATH
-            else
-              git pull origin main
-            fi
-
-            echo "📦 Instalando dependencias..."
+            echo "=========== 📦 Instalando dependencias ==========="
             npm install
 
-            echo "🔍 Revisando PM2..."
+            echo "=========== 🔍 Verificando PM2 ==========="
             pm2 describe $APP_NAME > /dev/null 2>&1
 
             if [ $? -eq 0 ]; then
-              echo "♻️ Reiniciando app..."
+              echo "♻️ Proceso PM2 encontrado → reiniciando..."
               pm2 restart $APP_NAME
             else
-              echo "🚀 Iniciando app..."
-              pm2 start index.js --name $APP_NAME
+              echo "🚀 Proceso no existe → iniciando con ecosystem.config.cjs..."
+              pm2 start ecosystem.config.cjs --name $APP_NAME
             fi
 
+            echo "=========== 💾 Guardando estado PM2 ==========="
             pm2 save
+
+            echo "=========== ✅ DEPLOY FINALIZADO ==========="
