@@ -1,6 +1,7 @@
 import SiigoConfig from "../../config/siigo.config.js";
 import { pool } from "../../database/conexion.js";
 import moment from "moment-timezone";
+import calculateSize from "../../utils/calculateZise.js";
 
 const InvoiceSiigoService = {
     async Create (data) {
@@ -101,7 +102,9 @@ const InvoiceSiigoService = {
             } = data;
             const created_at = moment().tz("America/Bogota").format("YYYY-MM-DD HH:mm:ss");
 
-            // Insertar factura
+            // --------------------------------------
+            // 1) Insertar factura
+            // --------------------------------------
             const [invoiceResult] = await pool.query(
                 `INSERT INTO sale_invoice 
                 (company, code, sale_point, cash_session, seller, customer,
@@ -116,7 +119,9 @@ const InvoiceSiigoService = {
 
             const invoiceId = invoiceResult.insertId;
 
-            // Insertar items (opcional: bulk insert)
+            // --------------------------------------
+            // 2) Insertar items 
+            // --------------------------------------
             for (const item of invoiceItem) {
                 await pool.query(
                     `INSERT INTO sale_invoice_item 
@@ -189,6 +194,16 @@ const InvoiceSiigoService = {
                 repay,
                 cufe,
             };
+
+            // --------------------------------------
+            // Calcular peso de la factura
+            // --------------------------------------
+            const sizeKB = calculateSize(data, "KB");
+            await pool.query(
+            `UPDATE plan SET storage_used = storage_used + ? 
+                WHERE id = (SELECT plan FROM company WHERE id = ?)`,
+            [sizeKB, data.company]
+            );
 
             return { code: 201, message: "Factura creada en POS", data: printData };
 

@@ -2,6 +2,7 @@ import SiigoConfig from "../config/siigo.config.js";
 import bcrypt from "bcrypt"
 import { pool } from "../database/conexion.js";
 
+
 const  UserSiigoService = {
   async all (company) {
     try {

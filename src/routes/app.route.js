@@ -1,5 +1,6 @@
 import { Router } from "express"
 
+import AdminRoute from "./admin.route.js"
 import InvetoryRoute from "./inventory.route.js"
 import SaleRoute from "./sale.route.js"
 
@@ -17,6 +18,7 @@ const route = Router()
 
 route.post("/auth/login", AuthController.Login)
 
+route.use("/admin", AdminRoute)
 route.use("/inventory", InvetoryRoute)
 route.use('/sale', SaleRoute)
 
