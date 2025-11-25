@@ -228,6 +228,14 @@ const InvoiceSiigoService = {
         } catch (error) {
             return { code: 501, message: "ERROR: No se pudieron traer los tipos de factura de siigo", error: error.message}
         }
+    },
+
+    async TypeInvoicePOS(company) {
+        try {
+            
+        } catch (error) {
+            
+        }
     }
 
 }

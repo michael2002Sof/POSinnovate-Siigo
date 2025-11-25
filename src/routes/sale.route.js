@@ -5,6 +5,7 @@ import PaymentSiigoController from "../controllers/sale/payment.siigo.controller
 import InvoiceSiigoController from "../controllers/sale/invoice.siigo.controller.js";
 import CashController from "../controllers/sale/cash.controller.js";
 import ReportController from "../controllers/sale/report.controller.js";
+import InvoiceResolutionController from "../controllers/sale/invoiceResolution.controller.js";
 
 const route = Router()
 
@@ -27,6 +28,7 @@ route.put("/cash/close", CashController.CashSessionClose)
 route.post("/invoice", InvoiceSiigoController.Create)
 route.post("/invoice/pos", InvoiceSiigoController.CreatePOS)
 route.get("/invoice/type/:company", InvoiceSiigoController.TypeInvoice)
+route.get("/invoice/resolution/pos/:company", InvoiceResolutionController.AllPOS)
 
 route.get("/report/by/:id", ReportController.SaleSessionById)
 route.get("/report/day/:date/:company", ReportController.SessionByDate)
