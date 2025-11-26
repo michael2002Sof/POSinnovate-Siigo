@@ -9,12 +9,10 @@ const InvoiceSiigoService = {
             const client = await SiigoConfig.createClient(data.company)
             const response = await client.post("invoices", data)
             const invoiceSiigo = response.data
-            console.log("Facura inmediata", invoiceSiigo)
             const invoiceId = invoiceSiigo.id;
 
             // 2️⃣ Esperar CUFE usando polling
             const invoiceWithCufe = await this.waitForCUFE(client, invoiceId);
-            console.log(invoiceWithCufe)
 
             return { code: 201, message: "Factura creada en siigo", data: invoiceWithCufe}
         } catch (error) {
@@ -229,14 +227,6 @@ const InvoiceSiigoService = {
             return { code: 501, message: "ERROR: No se pudieron traer los tipos de factura de siigo", error: error.message}
         }
     },
-
-    async TypeInvoicePOS(company) {
-        try {
-            
-        } catch (error) {
-            
-        }
-    }
 
 }
 

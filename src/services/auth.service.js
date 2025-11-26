@@ -14,7 +14,6 @@ const AuthService = {
     async Login (data) {
         try {
             const {email, password} = data
-            console.log(data)
             const [admin] = await pool.query(
                 "SELECT * FROM admin WHERE email = ? LIMIT 1",
                 [email]

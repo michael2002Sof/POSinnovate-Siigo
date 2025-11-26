@@ -75,20 +75,27 @@ const ReportService = {
         }
     },
 
-    async InvoiceByDate(date, company) {
+    async InvoiceByDate(date, company, user) {
         try {
-            console.log("Fecha recibida:", date, "Compañía:", company);
-
             const [[companyData]] = await pool.query(
                 `SELECT name, nit, address, city, cell, logo FROM company WHERE id = ? LIMIT 1`,
                 [company]
             );
-            console.log("Datos de la compañía:", companyData);
 
+            const [adminCheck] = await pool.query(`SELECT id FROM admin WHERE id = ? LIMIT 1`, [user])
+            
+            let whereCondition = `company = ? AND DATE(created_at) = ? AND type = ?`
+            const queryParams = [company, date, 'invoice']
+            if (adminCheck.length === 0) {
+                whereCondition += `AND seller = ?`
+                queryParams.push(user)
+            }
+            console.log(whereCondition)
+            console.log(queryParams)
             const [invoices] = await pool.query(
-                `SELECT * FROM sale_invoice WHERE company = ? AND DATE(created_at) = ? AND type = ? ORDER BY id ASC`,
-                [company, date, 'invoice']
-            ); 
+                `SELECT * FROM sale_invoice WHERE ${whereCondition} ORDER BY id ASC`, queryParams
+            );
+
             if (invoices.length === 0) {
                 return { code: 200, data: [], message: "No hay facturas para la fecha indicada" };
             }
@@ -167,7 +174,7 @@ const ReportService = {
         } catch (error) {
             return { code: 500, message: "Error al obtener las facturas por fecha", error: error.message };
         }
-    }
+    },
 };
 
 export default ReportService;
