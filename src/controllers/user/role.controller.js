@@ -1,4 +1,4 @@
-import RoleService from "../services/role.service.js"
+import RoleService from "../../services/user/role.service.js"
 
 const RoleController = {
     async RegisterRole (req, res) {

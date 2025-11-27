@@ -1,4 +1,4 @@
-import {pool} from "../database/conexion.js"
+import {pool} from "../../database/conexion.js"
 
 const RoleService = {
     async RegisterRole (data) {

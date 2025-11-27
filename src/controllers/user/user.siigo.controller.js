@@ -1,4 +1,4 @@
-import UserSiigoService from "../services/user.siigo.service.js"
+import UserSiigoService from "../../services/user/user.siigo.service.js"
 
 const UserSiigoController = {
     async all (req, res) {

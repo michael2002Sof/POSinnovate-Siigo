@@ -3,13 +3,12 @@ import { Router } from "express"
 import AdminRoute from "./admin.route.js"
 import InvetoryRoute from "./inventory.route.js"
 import SaleRoute from "./sale.route.js"
+import UserRoute from "./user.route.js"
 
 import AuthController from "../controllers/auth.controller.js"
-import RoleController from "../controllers/role.controller.js"
 import BranchController from "../controllers/branch.controller.js"
 import ProductSiigoController from "../controllers/product.siigo.controller.js"
 import CustomerSiigoController from "../controllers/customer.siigo.controller.js"
-import UserSiigoController from "../controllers/user.siigo.controller.js"
 import AccountSiigoController from "../controllers/account.siigo.controller.js"
 import CreditNoteSiigoController from "../controllers/creditnote.siigo.controller.js"
 
@@ -21,18 +20,15 @@ route.post("/auth/login", AuthController.Login)
 route.use("/admin", AdminRoute)
 route.use("/inventory", InvetoryRoute)
 route.use('/sale', SaleRoute)
+route.use("/user", UserRoute)
 
-route.post("/rol", RoleController.RegisterRole)
-route.get("/rol/:company", RoleController.AllRole)
-route.put("/rol", RoleController.UpdateRole)
+
 
 route.post('/account', AccountSiigoController.CreatePOS);
 route.get('/account/:company', AccountSiigoController.AllPOS);
 route.put('/account', AccountSiigoController.UpdatePOS);
 
-route.get("/user/:company", UserSiigoController.all)
-route.post("/user/pos", UserSiigoController.CreatePOS)
-route.get("/user/pos/:company", UserSiigoController.allPOS)
+
 
 route.post("/branch", BranchController.Create)
 route.get("/branch/:company", BranchController.All)

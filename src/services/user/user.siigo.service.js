@@ -1,6 +1,6 @@
-import SiigoConfig from "../config/siigo.config.js";
+import SiigoConfig from "../../config/siigo.config.js";
 import bcrypt from "bcrypt"
-import { pool } from "../database/conexion.js";
+import { pool } from "../../database/conexion.js";
 
 
 const  UserSiigoService = {
@@ -17,7 +17,25 @@ const  UserSiigoService = {
   async CreatePOS (data) {
     try {
       const {id, company, rol, name, email, password} = data
-      // Verificar si el usuario ya existe
+
+      //1. Obtener los límites del plan
+      const [[plan]] = await pool.query(
+        `SELECT * FROM plan 
+        WHERE id = (SELECT plan FROM company WHERE id = ?) LIMIT 1`,
+        [company]
+      )
+      console.log(plan)
+
+      // 2. VERIFICACIÓN DE LÍMITE DE USUARIO
+      if (plan.user_count >= plan.user_limit) {
+        return { 
+          success: false, 
+          code: 403, 
+          message: `El límite de ${plan.user_limit} usuarios para este plan ha sido alcanzado. No se puede registrar un nuevo usuario.` 
+        }
+      }
+
+      // 3. VERIFICACIÓN DE EXISTENCIA EN TABLA 'user'
       const [exists] = await pool.query(
         "SELECT id FROM user WHERE id = ?",
         [id]
@@ -25,6 +43,16 @@ const  UserSiigoService = {
       if (exists.length > 0) {
         return { success: false, code: 409, message: "El correo ya está registrado." }
       }
+
+      // 4. VERIFICACIÓN DE EXISTENCIA EN TABLA 'admin' (¡NUEVA VERIFICACIÓN!)
+      const [adminExists] = await pool.query(
+        "SELECT id FROM admin WHERE id = ?",
+        [id]
+      )
+      if (adminExists.length > 0) {
+        return { success: false, code: 409, message: "El usuario ya está registrado como administrador del sistema." }
+      }
+
       // Encriptar contraseña antes de guardar
       const hashedPassword = await bcrypt.hash(password, 10)
 
@@ -33,6 +61,12 @@ const  UserSiigoService = {
         `INSERT INTO user (id, company, rol, name, email, password) VALUES (?, ?, ?, ?, ?, ?)`,
         [id, company, rol, name, email, hashedPassword]
       )
+
+      await pool.query(
+      `UPDATE plan SET user_count = user_count + 1 
+        WHERE id = ?`,
+      [plan.id]
+      );
 
       return { success: true, code: 201, message: "Usuario registrado con éxito!" }
     } catch (error) {
