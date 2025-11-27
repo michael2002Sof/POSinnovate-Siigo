@@ -5,17 +5,51 @@ import moment from "moment-timezone";
 const ReportService = {
     async SaleSessionById(id) {
         try {
-            console.log("id de la session", id)
-            const [rows] = await pool.query(
-            `SELECT * FROM cash_session 
-            WHERE id = ? LIMIT 1`,
-            [id]
+            const [[row]] = await pool.query(
+            `SELECT 
+                cs.id,
+                cs.sale_point,
+                sp.name AS sales_point_name,
+                b.name AS branch_name,
+                u1.name AS opened_by,
+                u2.name AS closed_by,
+                cs.status,
+                cs.opened_at,
+                cs.closed_at,
+                cs.initial_cash,
+                cs.total_cash,
+                cs.total_transfer,
+                cs.subtotal_method,
+                cs.total_return,
+                cs.total_method,
+                cs.subtotal,
+                cs.tax0,
+                cs.tax5,
+                cs.tax19,
+                cs.total
+                FROM cash_session cs
+                INNER JOIN sale_point sp ON sp.id = cs.sale_point
+                INNER JOIN user u1 ON u1.id = cs.opened_by
+                INNER JOIN branch b ON b.id = sp.branch
+                LEFT JOIN user u2 ON u2.id = cs.closed_by
+                WHERE cs.id = ?`,
+                [id]
             );
-            return {success: true, code:201, data: rows[0]};
+               // Convertir fechas a "America/Bogota" ANTES de enviarlas al frontend
+            const session = {
+                ...row,
+                opened_at: row.opened_at 
+                    ? moment(row.opened_at).format("YYYY-MM-DD HH:mm A")
+                    : null,
+                closed_at: row.closed_at 
+                    ? moment(row.closed_at).format("YYYY-MM-DD HH:mm A")
+                    : null
+            }
+            return {success: true, code:201, data: session};
     
         } catch (error) {
-            console.error("Error al obtener facturas:", error);
-            return { code: 501, message: "Error al obtener facturas", error: error.message }
+            console.error("Error al obtener la session abierta:", error);
+            return { code: 501, message: "Error al obtener la session abierta", error: error.message }
         }
     },
 
