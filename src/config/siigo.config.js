@@ -4,6 +4,7 @@ import axios from "axios";
 import { pool } from "../database/conexion.js";
 
 const tokenCache = new Map(); // Cache por empresa
+const SIIGO_REQUEST_TIMEOUT = 60000;
 
 const SiigoConfig = {
 
@@ -60,6 +61,7 @@ const SiigoConfig = {
 
         return axios.create({
             baseURL: "https://api.siigo.com/v1/",
+            timeout: SIIGO_REQUEST_TIMEOUT,
             headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",

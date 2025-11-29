@@ -88,7 +88,6 @@ const ReportService = {
                 ORDER BY cs.opened_at ASC`,
             [date, company]
             );
-            console.log(rows)
 
             // Convertir fechas a "America/Bogota" ANTES de enviarlas al frontend
             const sesiones = rows.map(s => ({
@@ -124,8 +123,6 @@ const ReportService = {
                 whereCondition += `AND seller = ?`
                 queryParams.push(user)
             }
-            console.log(whereCondition)
-            console.log(queryParams)
             const [invoices] = await pool.query(
                 `SELECT * FROM sale_invoice WHERE ${whereCondition} ORDER BY id ASC`, queryParams
             );
