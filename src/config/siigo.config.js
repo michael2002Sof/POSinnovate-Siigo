@@ -23,34 +23,39 @@ const SiigoConfig = {
     // Generar Token Siigo con cache
     // ----------------------------------------------------
     async getToken(company) {
-        const cached = tokenCache.get(company);
+        try {
+            const cached = tokenCache.get(company);
 
-        if (cached && cached.expires > new Date()) {
-            //console.log(`♻️ Usando token en caché Siigo → Empresa ${company}`);
-            return cached.token;
+            if (cached && cached.expires > new Date()) {
+                //console.log(`♻️ Usando token en caché Siigo → Empresa ${company}`);
+                return cached.token;
+            }
+
+            const credentials = await this.getCredentials(company);
+            console.log(credentials)
+            if (!credentials) throw new Error("No se encontraron credenciales de Siigo");
+
+            //console.log(`🔐 Solicitando token Siigo → Empresa ${company}`);
+
+            const { data } = await axios.post("https://api.siigo.com/auth", {
+                username: credentials.email,
+                access_key: credentials.api_key,
+            });
+
+            const expires = new Date(Date.now() + 55 * 60 * 1000);
+
+            tokenCache.set(company, {
+                token: data.access_token,
+                expires,
+            });
+
+            //console.log("✅ Token Siigo renovado");
+
+            return data.access_token;
+        } catch (error) {
+            console.log(error)
         }
-
-        const credentials = await this.getCredentials(company);
-        console.log(credentials)
-        if (!credentials) throw new Error("No se encontraron credenciales de Siigo");
-
-        //console.log(`🔐 Solicitando token Siigo → Empresa ${company}`);
-
-        const { data } = await axios.post("https://api.siigo.com/auth", {
-            username: credentials.email,
-            access_key: credentials.api_key,
-        });
-
-        const expires = new Date(Date.now() + 55 * 60 * 1000);
-
-        tokenCache.set(company, {
-            token: data.access_token,
-            expires,
-        });
-
-        console.log("✅ Token Siigo renovado");
-
-        return data.access_token;
+       
     },
 
     // ----------------------------------------------------

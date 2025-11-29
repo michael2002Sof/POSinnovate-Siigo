@@ -100,18 +100,27 @@ const InvoiceSiigoService = {
             } = data;
             const created_at = moment().tz("America/Bogota").format("YYYY-MM-DD HH:mm:ss");
 
+            // Consultar cliente en Siigo UNA vez
+            const clientAxios = await SiigoConfig.createClient(company);
+            const { data: customer } = await clientAxios.get(`customers/${client}`);
+
+            const customerName = customer?.name?.join(" ") || "Consumidor Final";
+            const customerCC = customer?.identification || "N/A";
+            const customerAddress = customer?.address?.address || "Sin dirección";
+
             // --------------------------------------
             // 1) Insertar factura
             // --------------------------------------
             const [invoiceResult] = await pool.query(
                 `INSERT INTO sale_invoice 
                 (company, code, sale_point, cash_session, seller, customer,
-                subtotal, tax0, tax5, tax19, total, receipt_cash, receipt_transfer, total_payment, repay, cufe, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                subtotal, tax0, tax5, tax19, total, receipt_cash, receipt_transfer, total_payment, repay, cufe, created_at, customer_name, customer_cc, customer_address)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     company, code, sale_point, cash_session, seller, client,
                     subtotal, tax0, tax5, tax19, total, receipt_cash,
-                    receipt_transfer, total_payment, repay, cufe, created_at
+                    receipt_transfer, total_payment, repay, cufe, created_at,
+                    customerName, customerCC, customerAddress
                 ]
             );
 
@@ -149,14 +158,6 @@ const InvoiceSiigoService = {
                 'SELECT name FROM user WHERE id = ? LIMIT 1',
                 [seller]
             );
-
-            // Consultar cliente en Siigo UNA vez
-            const clientAxios = await SiigoConfig.createClient(company);
-            const { data: customer } = await clientAxios.get(`customers/${client}`);
-
-            const customerName = customer?.name?.join(" ") || "Sin nombre";
-            const customerCC = customer?.identification || "N/A";
-            const customerAddress = customer?.address?.address || "Sin dirección";
 
             // Obtener fecha real desde MySQL
             const [[invoiceCreated]] = await pool.query(

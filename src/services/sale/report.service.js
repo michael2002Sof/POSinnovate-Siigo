@@ -108,8 +108,11 @@ const ReportService = {
         }
     },
 
-    async InvoiceByDate(date, company, user) {
+    async InvoiceByDate(date, company, user, page) {
         try {
+            const pageSize = 7
+            const offset = (page - 1) * pageSize
+
             const [[companyData]] = await pool.query(
                 `SELECT name, nit, address, city, cell, logo FROM company WHERE id = ? LIMIT 1`,
                 [company]
@@ -124,12 +127,14 @@ const ReportService = {
                 queryParams.push(user)
             }
             const [invoices] = await pool.query(
-                `SELECT * FROM sale_invoice WHERE ${whereCondition} ORDER BY id ASC`, queryParams
+                `SELECT * FROM sale_invoice WHERE ${whereCondition} ORDER BY id DESC LIMIT ${pageSize} OFFSET ${offset}`, queryParams
             );
-
             if (invoices.length === 0) {
                 return { code: 200, data: [], message: "No hay facturas para la fecha indicada" };
             }
+
+            const [[count]] = await pool.query(`SELECT COUNT(id) AS totalCount FROM sale_invoice WHERE ${whereCondition}`, queryParams)
+            const totalPages = Math.ceil(count.totalCount/pageSize)
 
             const clientAxios = await SiigoConfig.createClient(company);
             const result = [];
@@ -201,7 +206,14 @@ const ReportService = {
                 });
             }
 
-            return { code: 200, data: result };
+            return { 
+                code: 200, 
+                data: {
+                    invoices: result,
+                    totalCount: count.totalCount,
+                    totalPages
+                } 
+            };
         } catch (error) {
             return { code: 500, message: "Error al obtener las facturas por fecha", error: error.message };
         }

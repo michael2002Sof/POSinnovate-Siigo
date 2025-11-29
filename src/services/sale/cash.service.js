@@ -5,7 +5,6 @@ const CashService = {
     async CashSessionOpen (data) {
         try {
             const { sale_point, branch, opened_by, initial_cash, company } = data
-            console.log(data)
             const opened_at = moment().tz("America/Bogota").format("YYYY-MM-DD HH:mm:ss");
             const date_today = moment().tz("America/Bogota").format("YYYY-MM-DD");
 
@@ -32,9 +31,9 @@ const CashService = {
             // Actualizar estado de la caja
             await pool.query(
                 `UPDATE sale_point 
-                 SET status = ?, opened_at = ?
+                 SET status = ?, opened_at = ?, closed_at  = ?
                  WHERE id = ?`,
-                ['open', opened_at, sale_point]
+                ['open', opened_at, null, sale_point]
             )
             
             return { success: true, code: 201, message: "Caja abierta exitosamente.", data: { session: insert.insertId } }

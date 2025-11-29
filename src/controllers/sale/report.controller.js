@@ -14,8 +14,8 @@ export const ReportController = {
     },
 
     async InvoiceByDate (req, res) {
-        const {date, company, user} = req.params
-        const response = await ReportService.InvoiceByDate(date, company, user)
+        const {date, company, user, page} = req.params
+        const response = await ReportService.InvoiceByDate(date, company, user, page)
         res.status(response.code).json(response)
     }
 };
