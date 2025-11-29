@@ -112,6 +112,7 @@ const ReportService = {
         try {
             const pageSize = 7
             const offset = (page - 1) * pageSize
+            console.log(offset)
 
             const [[companyData]] = await pool.query(
                 `SELECT name, nit, address, city, cell, logo FROM company WHERE id = ? LIMIT 1`,
@@ -136,23 +137,8 @@ const ReportService = {
             const [[count]] = await pool.query(`SELECT COUNT(id) AS totalCount FROM sale_invoice WHERE ${whereCondition}`, queryParams)
             const totalPages = Math.ceil(count.totalCount/pageSize)
 
-            const clientAxios = await SiigoConfig.createClient(company);
             const result = [];
             for (const inv of invoices) {
-
-                // 4.1 Obtener cliente de Siigo
-                let customerName = "Sin nombre";
-                let customerCC = "N/A";
-                let customerAddress = "Sin dirección";
-
-                try {
-                    const { data: customer } = await clientAxios.get(`customers/${inv.customer}`);
-                    customerName = customer?.name?.join(" ") || "Sin nombre";
-                    customerCC = customer?.identification || "N/A";
-                    customerAddress = customer?.address?.address || "Sin dirección";
-                } catch (err) {
-                    console.log("Cliente no encontrado en Siigo:", inv.customer);
-                }
 
                 // 4.2 Obtener info del punto de venta
                 const [[salePointData]] = await pool.query(
@@ -186,9 +172,9 @@ const ReportService = {
                     caja: salePointData.name,
                     created_at: moment(inv.created_at).format("YYYY-MM-DD hh:mm A"),
                     expire_at: moment(inv.created_at).format("YYYY-MM-DD hh:mm A"),
-                    client: customerName,
-                    cc: customerCC,
-                    address_client: customerAddress,
+                    client: inv.customer_name || "Consumidor Final",
+                    cc: inv.customer_cc || "222222222222",
+                    address_client: inv.customer_address,
                     vendedor: sellerData.name,
                     subtotal: inv.subtotal,
                     descuento: 0,
