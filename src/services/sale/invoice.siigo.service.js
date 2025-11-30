@@ -94,19 +94,12 @@ const InvoiceSiigoService = {
 
             const {
                 company, code, sale_point, cash_session, seller,
-                client, subtotal, tax0, tax5, tax19, total,
+                client, customerName, customerCC, customerAddress,
+                subtotal, tax0, tax5, tax19, total,
                 receipt_cash, receipt_transfer, total_payment, repay, cufe,
                 invoiceItem
             } = data;
             const created_at = moment().tz("America/Bogota").format("YYYY-MM-DD HH:mm:ss");
-
-            // Consultar cliente en Siigo UNA vez
-            const clientAxios = await SiigoConfig.createClient(company);
-            const { data: customer } = await clientAxios.get(`customers/${client}`);
-
-            const customerName = customer?.name?.join(" ") || "Consumidor Final";
-            const customerCC = customer?.identification || "N/A";
-            const customerAddress = customer?.address?.address || "Sin dirección";
 
             // --------------------------------------
             // 1) Insertar factura
@@ -211,7 +204,7 @@ const InvoiceSiigoService = {
                 code: 501,
                 message: "ERROR: No se pudo crear la factura en el POS",
                 error: error.message,
-                sql: error.sqlMessage || null
+                details: error
             };
         }
     },
