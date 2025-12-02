@@ -1,5 +1,4 @@
 import { pool } from "../../database/conexion.js";
-import SiigoConfig from "../../config/siigo.config.js";
 import moment from "moment-timezone";
 
 const ReportService = {
@@ -36,8 +35,10 @@ const ReportService = {
                 [id]
             );
                // Convertir fechas a "America/Bogota" ANTES de enviarlas al frontend
+            const [[totalSales]] = await pool.query(`SELECT COUNT(id) AS count FROM sale_invoice WHERE cash_session = ?`, id)
             const session = {
                 ...row,
+                totalSales: totalSales.count,
                 opened_at: row.opened_at 
                     ? moment(row.opened_at).format("YYYY-MM-DD HH:mm A")
                     : null,
@@ -90,15 +91,27 @@ const ReportService = {
             );
 
             // Convertir fechas a "America/Bogota" ANTES de enviarlas al frontend
-            const sesiones = rows.map(s => ({
-                ...s,
-                opened_at: s.opened_at 
-                    ? moment(s.opened_at).format("YYYY-MM-DD HH:mm A")
-                    : null,
-                closed_at: s.closed_at 
-                    ? moment(s.closed_at).format("YYYY-MM-DD HH:mm A")
-                    : null
-            }));
+            const sesiones = []
+
+            for (const s of rows) {
+                const [[totalSales]] = await pool.query(
+                    `SELECT COUNT(id) AS count
+                    FROM sale_invoice
+                    WHERE cash_session = ?`,
+                    [s.id]
+                )
+            
+                sesiones.push({
+                    ...s,
+                    opened_at: s.opened_at 
+                        ? moment(s.opened_at).format("YYYY-MM-DD HH:mm A")
+                        : null,
+                    closed_at: s.closed_at 
+                        ? moment(s.closed_at).format("YYYY-MM-DD HH:mm A")
+                        : null,
+                    totalSales: totalSales.count  
+                })
+            }
 
 
             return { code: 200, data: sesiones };
