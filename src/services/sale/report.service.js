@@ -125,7 +125,6 @@ const ReportService = {
         try {
             const pageSize = 7
             const offset = (page - 1) * pageSize
-            console.log(offset)
 
             const [[companyData]] = await pool.query(
                 `SELECT name, nit, address, city, cell, logo FROM company WHERE id = ? LIMIT 1`,

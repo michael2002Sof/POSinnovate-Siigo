@@ -63,26 +63,37 @@ const InvoiceSiigoService = {
 
       // 3️⃣ Método reusable para obtener el CUFE
     async waitForCUFE(client, invoiceId) {
-        const maxAttempts = 10;   // ~ 30 segundos máximo
-        const delay = 3000;       // 3s entre intentos
+        const maxTotalTime = 90000;    // 90 segundos
+        const interval = 3000;        // cada 3 segundos
+        const startTime = Date.now();
 
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            console.log(`⏳ Esperando CUFE... intento ${attempt}/${maxAttempts}`);
+        while (true) {
+            const elapsed = Date.now() - startTime;
+            //console.log(`⏳ Consultando CUFE... (${Math.floor(elapsed/1000)}s)`)
 
-            const res = await client.get(`invoices/${invoiceId}`);
-            const invoice = res.data;
+            try {
+                const res = await client.get(`invoices/${invoiceId}`);
+                const invoice = res.data;
 
-            if (invoice.stamp?.status === "Accepted" && invoice.stamp?.cufe) {
-                console.log("✅ CUFE obtenido:", invoice.stamp.cufe);
-                return invoice;
+
+                // Si ya fue aceptada → CUFE disponible
+                if (invoice.stamp?.status === "Accepted" && invoice.stamp?.cufe) {
+                    //console.log("✅ CUFE obtenido:", invoice.stamp.cufe);
+                    return invoice;
+                }
+            } catch (error) {
+                console.log("❌ Error consultando CUFE:", error.message);
             }
 
-            // esperar antes del próximo intento
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
+            // Si se pasó el tiempo máximo → salimos
+            if (elapsed >= maxTotalTime) {
+                console.log("⚠ Tiempo máximo alcanzado. CUFE no disponible aún.");
+                return null;
+            }
 
-        console.log("⚠ No se obtuvo CUFE dentro del tiempo esperado.");
-        return null;
+            // Esperamos antes del próximo intento
+            await new Promise(res => setTimeout(res, interval));
+        }
     },
 
     async CreatePOS(data) {
