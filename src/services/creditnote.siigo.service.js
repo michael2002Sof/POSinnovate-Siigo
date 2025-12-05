@@ -130,18 +130,6 @@ const CreditNoteSiigoService = {
 
                 const creditId = insertResult.insertId;
 
-                // ---- Calcular peso de la nota ----
-                const [[creditSize]] = await pool.query(
-                    "SELECT ROUND((LENGTH(JSON_OBJECT(*))/1024), 2) AS kb FROM sale_invoice WHERE id = ?",
-                    [creditId]
-                );
-
-                await pool.query(
-                    "UPDATE plan SET storage_used = storage_used + ? WHERE id = (SELECT plan FROM company WHERE id = ?)",
-                    [creditSize.kb, originalInvoice.company]
-                );
-
-
                 /// ------------------------------
                 /// 5. Insertar ítems negativos
                 /// ------------------------------
@@ -165,19 +153,6 @@ const CreditNoteSiigoService = {
                             -Math.abs(taxes.tax19),
                             -Math.abs(item.total)
                         ]
-                    );
-
-                    const itemId = itemInsert.insertId;
-
-                    // ---- Calcular peso del item ----
-                    const [[itemSize]] = await pool.query(
-                        "SELECT ROUND((LENGTH(JSON_OBJECT(*))/1024), 2) AS kb FROM sale_invoice_item WHERE id = ?",
-                        [itemId]
-                    );
-
-                    await pool.query(
-                        "UPDATE plan SET storage_used = storage_used + ? WHERE id = (SELECT plan FROM company WHERE id = ?)",
-                        [itemSize.kb, originalInvoice.company]
                     );
                 }
 
