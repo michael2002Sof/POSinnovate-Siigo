@@ -55,7 +55,7 @@ const CreditNoteSiigoService = {
             const client = await SiigoConfig.createClient(company)
             const response = await client.get(`credit-notes?created_start=${date}`)
             const creditNotes = response.data.results
-            console.log("Notas de credito de siigo", creditNotes)
+            //console.log("Notas de credito de siigo", creditNotes)
 
             if (creditNotes.length === 0) {
                 return { code: 201, message: "No hay notas nuevas hoy." };
@@ -90,6 +90,7 @@ const CreditNoteSiigoService = {
                 }
 
                 const originalInvoice = original[0];
+                //console.log("Factura Original", originalInvoice)
 
                 ///------------------------------
                 /// Totales de la nota
@@ -105,7 +106,7 @@ const CreditNoteSiigoService = {
                         sale_point, cash_session, seller, customer, customer_name, customer_cc, customer_address,
                         subtotal, tax0, tax5, tax19, total,
                         receipt_cash, total_payment, reason, cufe, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         originalInvoice.company,
                         "credit-note",
