@@ -55,7 +55,7 @@ const CreditNoteSiigoService = {
             const client = await SiigoConfig.createClient(company)
             const response = await client.get(`credit-notes?created_start=${date}`)
             const creditNotes = response.data.results
-            //console.log("Notas de credito de siigo", creditNotes)
+            console.log("Notas de credito de siigo", creditNotes)
 
             if (creditNotes.length === 0) {
                 return { code: 201, message: "No hay notas nuevas hoy." };
@@ -102,7 +102,7 @@ const CreditNoteSiigoService = {
                 const [insertResult] = await pool.query(
                     `INSERT INTO sale_invoice (
                         company, type, reference_invoice, code,
-                        sale_point, cash_session, seller, customer,
+                        sale_point, cash_session, seller, customer, customer_name, customer_cc, customer_address,
                         subtotal, tax0, tax5, tax19, total,
                         receipt_cash, total_payment, reason, cufe, created_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -115,6 +115,9 @@ const CreditNoteSiigoService = {
                         originalInvoice.cash_session,
                         originalInvoice.seller,
                         originalInvoice.customer,
+                        originalInvoice.customer_name,
+                        originalInvoice.customer_cc,
+                        originalInvoice.customer_address,
                         num(totals.subtotal),
                         num(totals.tax0),
                         num(totals.tax5),
