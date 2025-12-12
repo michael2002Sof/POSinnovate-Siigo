@@ -126,11 +126,6 @@ const ReportService = {
             const pageSize = 7
             const offset = (page - 1) * pageSize
 
-            const [[companyData]] = await pool.query(
-                `SELECT name, nit, address, city, cell, logo FROM company WHERE id = ? LIMIT 1`,
-                [company]
-            );
-
             const [adminCheck] = await pool.query(`SELECT id FROM admin WHERE id = ? LIMIT 1`, [user])
             
             let whereCondition = `company = ? AND DATE(created_at) = ? AND type = ?`
@@ -174,19 +169,13 @@ const ReportService = {
 
                 // 4.5 Construir estructura EXACTA como CreatePOS
                 result.push({
-                    logo: companyData.logo,
-                    company: companyData.name,
-                    nit: companyData.nit,
-                    address: companyData.address,
-                    city: companyData.city,
-                    cell: companyData.cell,
                     code: inv.code,
                     caja: salePointData.name,
                     created_at: moment(inv.created_at).format("YYYY-MM-DD hh:mm A"),
                     expire_at: moment(inv.created_at).format("YYYY-MM-DD hh:mm A"),
                     client: inv.customer_name || "Consumidor Final",
                     cc: inv.customer_cc || "222222222222",
-                    address_client: inv.customer_address,
+                    address_client: inv.customer_address || "Sin Dirección",
                     vendedor: sellerData.name,
                     subtotal: inv.subtotal,
                     descuento: 0,

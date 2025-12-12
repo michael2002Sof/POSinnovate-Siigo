@@ -148,11 +148,6 @@ const InvoiceSiigoService = {
             }
 
             // Consultas necesarias
-            const [[companyData]] = await pool.query(
-                'SELECT nit, logo, address, city, cell FROM company WHERE id = ? LIMIT 1',
-                [company]
-            );
-
             const [[salePointData]] = await pool.query(
                 'SELECT name FROM sale_point WHERE id = ? LIMIT 1',
                 [sale_point]
@@ -171,12 +166,6 @@ const InvoiceSiigoService = {
 
             // Estructurar JSON
             const printData = {
-                logo: companyData.logo,
-                company: companyData.company,
-                nit: companyData.nit,
-                address: companyData.address,
-                city: companyData.city,
-                cell: companyData.cell,
                 code,
                 caja: salePointData.name,
                 created_at: moment(invoiceCreated.created_at).format("YYYY-MM-DD hh:mm A"),
