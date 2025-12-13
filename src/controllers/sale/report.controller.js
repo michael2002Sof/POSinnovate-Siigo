@@ -13,6 +13,12 @@ export const ReportController = {
         res.status(response.code).json(response)
     },
 
+    async SessionStatistic (req, res) {
+        const {company, from, to} = req.params
+        const response = await ReportService.SessionStatistic(company, from, to)
+        res.status(response.code).json(response)
+    },
+
     async InvoiceByDate (req, res) {
         const {date, company, user, page} = req.params
         const response = await ReportService.InvoiceByDate(date, company, user, page)

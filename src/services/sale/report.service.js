@@ -121,6 +121,47 @@ const ReportService = {
         }
     },
 
+    async SessionStatistic (company, from, to) {
+        try {
+            const [rows] = await pool.query (`
+                SELECT
+                    DATE(cs.opened_at) AS period,
+                    sp.name AS sale_point,
+                    
+                    SUM(cs.total_cash) AS total_cash,
+                    SUM(cs.total_transfer) AS total_transfer,
+                    SUM(cs.total_return) AS total_return,
+                    SUM(cs.total) AS total_sales,
+
+                    SUM(inv.total_invoices) AS total_invoices
+                FROM cash_session cs
+                INNER JOIN sale_point sp ON sp.id = cs.sale_point
+                LEFT JOIN (
+                    SELECT cash_session, COUNT(*) AS total_invoices
+                    FROM sale_invoice
+                    GROUP BY cash_session
+                ) inv ON inv.cash_session = cs.id
+                WHERE cs.company = ?
+                AND cs.opened_at BETWEEN ? AND ?
+                AND cs.status = 'finalized'
+                GROUP BY period, cs.sale_point
+                ORDER BY period ASC;
+                `,
+                [company, from, to]
+            )
+
+            return {code: 200, data: rows}
+            
+        } catch (error) {
+            return {
+                code: 500,
+                message: "Error al generar dashboard",
+                error: error.message,
+                details: error
+            };
+        }
+    },
+
     async InvoiceByDate(date, company, user, page) {
         try {
             const pageSize = 7
