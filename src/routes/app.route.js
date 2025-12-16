@@ -4,6 +4,7 @@ import AdminRoute from "./admin.route.js"
 import InvetoryRoute from "./inventory.route.js"
 import SaleRoute from "./sale.route.js"
 import UserRoute from "./user.route.js"
+import SubscriptionRoute from "./subscription.route.js"
 
 import AuthController from "../controllers/auth.controller.js"
 import BranchController from "../controllers/branch.controller.js"
@@ -17,6 +18,7 @@ const route = Router()
 
 route.post("/auth/login", AuthController.Login)
 
+route.use("/subscription", SubscriptionRoute)
 route.use("/admin", AdminRoute)
 route.use("/inventory", InvetoryRoute)
 route.use('/sale', SaleRoute)
