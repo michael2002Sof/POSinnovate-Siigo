@@ -8,15 +8,24 @@ const InvoiceSiigoService = {
         try {
             const client = await SiigoConfig.createClient(data.company)
             const response = await client.post("invoices", data)
+
             const invoiceSiigo = response.data
             const invoiceId = invoiceSiigo.id;
 
-            // 2️⃣ Esperar CUFE usando polling
+            // Esperar CUFE usando polling
             const invoiceWithCufe = await this.waitForCUFE(client, invoiceId);
 
-            return { code: 201, message: "Factura creada en siigo", data: invoiceWithCufe}
+            // Fallback: si no hay CUFE todavía, devolver al menos la factura creada
+            const resultInvoice = invoiceWithCufe ?? invoiceSiigo;
+
+            return { 
+                code: 201, 
+                message: invoiceWithCufe ? "Factura creada en siigo" : "Factura creada en siigo (CUFE pendiente)",
+                data: resultInvoice,
+                cufePending: !invoiceWithCufe,
+            }
         } catch (error) {
-            console.log("❌ Error completo Siigo:");
+            console.log("Error completo Siigo:");
 
             if (error.response) {
                 console.log("Status:", error.response.status);
@@ -61,7 +70,7 @@ const InvoiceSiigoService = {
 
     },
 
-      // 3️⃣ Método reusable para obtener el CUFE
+    // 3️⃣ Método reusable para obtener el CUFE
     async waitForCUFE(client, invoiceId) {
         const maxTotalTime = 90000;    // 90 segundos
         const interval = 3000;        // cada 3 segundos
