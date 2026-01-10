@@ -1,4 +1,7 @@
 import { Router } from "express"
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 
 import AdminRoute from "./admin.route.js"
 import InvetoryRoute from "./inventory.route.js"
@@ -43,6 +46,26 @@ route.post("/creditnote", CreditNoteSiigoController.CreatePOS)
 route.get("/creditnote/by/:company/:date", CreditNoteSiigoController.ByDate)
 
 route.get("/customer/by/:company/:identification", CustomerSiigoController.ByIdentification)
+
+const privateKeyPath = path.join(process.cwd(), "qz-private-key.pem");
+const privateKey = fs.readFileSync(privateKeyPath, "utf8");
+
+
+// Endpoint de firma dentro del router
+route.post("/qz/sign", (req, res) => {
+    try {
+        const { toSign } = req.body;
+
+        const signer = crypto.createSign("RSA-SHA256");
+        signer.update(toSign, "utf8");
+        signer.end();
+
+        const signature = signer.sign(privateKey, "base64");
+        res.json({ signature });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 
 export default route
