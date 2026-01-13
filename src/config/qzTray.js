@@ -19,9 +19,9 @@ const qzTray = {
             signer.end();
 
             const signature = signer.sign(privateKey, "base64");
-            res.json({ signature });
+            res.status(201).json({data: signature})
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            res.status(500).json({ error: err.message, details: err});
         }
     }
 }
