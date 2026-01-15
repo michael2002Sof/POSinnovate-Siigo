@@ -14,12 +14,14 @@ const qzTray = {
                 return res.status(400).json({ error: "toSign is required" });
             }
 
-            const signer = crypto.createSign("RSA-SHA256");
-            signer.update(toSign, "utf8");
+            const signer = crypto.createSign("SHA256");
+            signer.update(toSign);
             signer.end();
 
             const signature = signer.sign(privateKey, "base64");
-            res.status(201).json({data: signature})
+
+            res.setHeader("Content-Type", "text/plain");
+            res.send(signature);
         } catch (err) {
             res.status(500).json({ error: err.message, details: err});
         }
