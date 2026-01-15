@@ -14,7 +14,7 @@ const qzTray = {
                 return res.status(400).json({ error: "toSign is required" });
             }
 
-            const signer = crypto.createSign("SHA256");
+            const signer = crypto.createSign("RSA-SHA512");
             signer.update(toSign);
             signer.end();
 
