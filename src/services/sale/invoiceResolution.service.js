@@ -3,12 +3,12 @@ import { pool } from "../../database/conexion.js"
 const InvoiceResolutionService = {
     async Create (data) {
         try {
-            const {id, company, sale_point, cost_center_default, code, name, type, electronic_type, active, description} = data
+            const {siigo_id, company, sale_point, cost_center_default, code, name, type, electronic_type, active, description} = data
 
             await pool.query (`
-                INSERT INTO invoice_resolution (id, company, sale_point, cost_center, code, name, type, electronic_type, active, description)
+                INSERT INTO invoice_resolution (siigo_id, company, sale_point, cost_center, code, name, type, electronic_type, active, description)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [id, company, sale_point, cost_center_default, code, name, type, electronic_type, active, description]
+                [siigo_id, company, sale_point, cost_center_default, code, name, type, electronic_type, active, description]
             )
             return {code: 200, message: "Resolución registrada con Exito"}
         } catch (error) {

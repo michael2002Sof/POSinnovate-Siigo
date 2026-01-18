@@ -105,12 +105,35 @@ const SalesPointService = {
 
     async UpdateSalePoint (data) {
         try {
-            const {id, branch, user, name, warehouse, cost_center} = data
+            const {id, branch, user, name, warehouse, cost_center, methods, company} = data
 
             await pool.query(
                 "UPDATE sale_point SET branch = ?, seller = ?, name = ?, warehouse = ?, cost_center = ? WHERE id = ?",
                 [branch, user, name, warehouse, cost_center, id]
             ) 
+
+            // 2. Eliminar métodos anteriores
+            await pool.query(
+                `DELETE FROM sale_point_payment_method 
+                WHERE sale_point = ? AND company = ?`,
+                [id, company]
+            );
+
+            // 3. Insertar métodos nuevos
+            if (methods && methods.length > 0) {
+                const values = methods.map(pmID => [
+                    company,
+                    id,
+                    pmID
+                ]);
+
+                await pool.query(
+                    `INSERT INTO sale_point_payment_method 
+                    (company, sale_point, payment_method)
+                    VALUES ?`,
+                    [values]
+                );
+            }
 
             return { success: true, code: 200, message: "Sucursal Actualizada con exito"}
         } catch (error) {

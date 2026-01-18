@@ -116,7 +116,7 @@ const InvoiceSiigoService = {
                 company, code, sale_point, cash_session, seller,
                 client, customerName, customerCC, customerAddress,
                 subtotal, tax0, tax5, tax19, total,
-                receipt_cash, receipt_transfer, total_payment, repay, cufe,
+                receipt_cash, receipt_transfer, receipt_datafono, total_payment, repay, cufe,
                 invoiceItem
             } = data;
             const created_at = moment().tz("America/Bogota").format("YYYY-MM-DD HH:mm:ss");
@@ -127,12 +127,12 @@ const InvoiceSiigoService = {
             const [invoiceResult] = await pool.query(
                 `INSERT INTO sale_invoice 
                 (company, code, sale_point, cash_session, seller, customer,
-                subtotal, tax0, tax5, tax19, total, receipt_cash, receipt_transfer, total_payment, repay, cufe, created_at, customer_name, customer_cc, customer_address)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                subtotal, tax0, tax5, tax19, total, receipt_cash, receipt_transfer, receipt_datafono, total_payment, repay, cufe, created_at, customer_name, customer_cc, customer_address)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     company, code, sale_point, cash_session, seller, client,
                     subtotal, tax0, tax5, tax19, total, receipt_cash,
-                    receipt_transfer, total_payment, repay, cufe, created_at,
+                    receipt_transfer, receipt_datafono, total_payment, repay, cufe, created_at,
                     customerName, customerCC, customerAddress
                 ]
             );
@@ -191,6 +191,7 @@ const InvoiceSiigoService = {
                 total,
                 receipt_cash,
                 receipt_transfer,
+                receipt_datafono,
                 total_payment,
                 repay,
                 cufe,
