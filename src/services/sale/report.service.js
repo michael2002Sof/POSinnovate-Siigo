@@ -18,6 +18,7 @@ const ReportService = {
                 cs.initial_cash,
                 cs.total_cash,
                 cs.total_transfer,
+                cs.total_datafono,
                 cs.subtotal_method,
                 cs.total_return,
                 cs.total_method,
