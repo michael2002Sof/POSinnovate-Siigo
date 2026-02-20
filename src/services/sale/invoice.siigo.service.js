@@ -67,7 +67,7 @@ const InvoiceSiigoService = {
             const { company, code } = params
             const client = await SiigoConfig.createClient(company)
             const response = await client.get(`invoices?name=${code}`)
-            const invoice = response.data
+            const invoice = response.data.results[0]
             
             return { code: 200, data: invoice }
         } catch (error) {
