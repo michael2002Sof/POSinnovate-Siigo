@@ -62,6 +62,23 @@ const InvoiceSiigoService = {
 
     },
 
+    async byCodeSiigo(params){
+        try {
+            const { company, code } = params
+            const client = await SiigoConfig.createClient(company)
+            const response = await client.get(`invoices?name=${code}`)
+            const invoice = response.data
+            
+            return { code: 200, data: invoice }
+        } catch (error) {
+            return {
+                code: 501,
+                message: "Error: No se pudo buscar el cufe",
+                error: error.message
+            }
+        }
+    },
+
     // 3️⃣ Método reusable para obtener el CUFE
     async waitForCUFE(client, invoiceId) {
         const maxTotalTime = 90000;    // 90 segundos

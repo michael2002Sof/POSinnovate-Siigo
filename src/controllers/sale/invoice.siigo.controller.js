@@ -7,6 +7,11 @@ const InvoiceSiigoController = {
         res.status(response.code).json(response)
     },
 
+    async byCodeSiigo (req, res) {
+        const response = await InvoiceSiigoService.byCodeSiigo(req.params)
+        return res.status(response.code).json(response)
+    },
+
     async CreatePOS (req, res) {
         const data = req.body
         const response = await InvoiceSiigoService.CreatePOS(data)

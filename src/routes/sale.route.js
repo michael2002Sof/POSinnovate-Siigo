@@ -26,6 +26,7 @@ route.post("/cash/open", CashController.CashSessionOpen)
 route.put("/cash/close", CashController.CashSessionClose)
 
 route.post("/invoice", InvoiceSiigoController.Create)
+route.get("/invoice/by/:code/:company", InvoiceSiigoController.byCodeSiigo)
 route.post("/invoice/pos", InvoiceSiigoController.CreatePOS)
 route.get("/invoice/type/:company", InvoiceSiigoController.TypeInvoice)
 route.post("/invoice/resolution/pos", InvoiceResolutionController.Create)
