@@ -85,7 +85,7 @@ const CreditNoteSiigoService = {
                 );
 
                 if (!original.length) {
-                    console.warn("⚠ Factura original no encontrada:", creditNote.invoice.name);
+                    //console.warn("⚠ Factura original no encontrada:", creditNote.invoice.name);
                     continue;
                 }
 
