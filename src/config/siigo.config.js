@@ -5,6 +5,7 @@ import { pool } from "../database/conexion.js";
 
 const tokenCache = new Map(); // Cache por empresa
 const SIIGO_REQUEST_TIMEOUT = 60000;
+const TOKEN_BUFFER_SECONDS = 60; // renovar 1 minuto antes
 
 const SiigoConfig = {
 
@@ -13,49 +14,70 @@ const SiigoConfig = {
     // ----------------------------------------------------
     async getCredentials(company) {
         const [rows] = await pool.query(
-            "SELECT email, api_key FROM account WHERE company = ? AND provider = 'siigo' LIMIT 1",
+            `SELECT email, api_key 
+            FROM account 
+            WHERE company = ? 
+            AND provider = 'siigo' 
+            LIMIT 1`,
             [company]
         );
         return rows[0] || null;
     },
 
     // ----------------------------------------------------
-    // Generar Token Siigo con cache
+    // Obtener token válido (con cache inteligente)
     // ----------------------------------------------------
-    async getToken(company) {
-        try {
-            const cached = tokenCache.get(company);
+    async getToken(company, forceRefresh = false) {
+   
+        const cached = tokenCache.get(company);
 
-            if (cached && cached.expires > new Date()) {
-                //console.log(`♻️ Usando token en caché Siigo → Empresa ${company}`);
-                return cached.token;
+        // Si existe y no está vencido, usarlo
+        if (
+            !forceRefresh &&
+            cached && 
+            cached.expires > new Date()
+        ) {
+            return cached.token;
+        }
+
+        const credentials = await this.getCredentials(company);
+        if (!credentials) {
+            throw new Error("No se encontraron credenciales de Siigo");
+        }
+
+        try {
+            const { data } = await axios.post(
+                "https://api.siigo.com/auth", 
+                {
+                    username: credentials.email,
+                    access_key: credentials.api_key,
+                },
+                { timeout: SIIGO_REQUEST_TIMEOUT }
+            );
+            
+            if (!data?.access_token) {
+                throw new Error("Siigo no devolvió access_token");
             }
 
-            const credentials = await this.getCredentials(company);
-            console.log(credentials)
-            if (!credentials) throw new Error("No se encontraron credenciales de Siigo");
+            const expiresIn = data.expires_in || 3600
 
-            //console.log(`🔐 Solicitando token Siigo → Empresa ${company}`);
-
-            const { data } = await axios.post("https://api.siigo.com/auth", {
-                username: credentials.email,
-                access_key: credentials.api_key,
-            });
-
-            const expires = new Date(Date.now() + 55 * 60 * 1000);
+            //Restamos buffer de seguridad
+            const expires = new Date(
+                Date.now() + (expiresIn - TOKEN_BUFFER_SECONDS) * 1000
+            )
 
             tokenCache.set(company, {
                 token: data.access_token,
-                expires,
-            });
+                expires
+            })
 
-            //console.log("✅ Token Siigo renovado");
-
-            return data.access_token;
+            return data.access_token
         } catch (error) {
-            console.log(error)
+            tokenCache.delete(company);
+            throw new Error(
+                `Error generando token Siigo: ${error.response?.data?.message || error.message}`
+            );
         }
-       
     },
 
     // ----------------------------------------------------
@@ -63,8 +85,11 @@ const SiigoConfig = {
     // ----------------------------------------------------
     async createClient(company) {
         const token = await this.getToken(company);
+        if(!token) {
+            throw new Error("No se pudo obtener token válido de Siigo");
+        }
 
-        return axios.create({
+        const client = axios.create({
             baseURL: "https://api.siigo.com/v1/",
             timeout: SIIGO_REQUEST_TIMEOUT,
             headers: {
@@ -73,29 +98,40 @@ const SiigoConfig = {
                 "Partner-Id": "POSMundoCarnes",
             }
         });
-    },
 
-    // ----------------------------------------------------
-    // GET paginado genérico
-    // ----------------------------------------------------
-    async Paginated(client, endpoint) {
-        let page = 1;
-        let all = [];
+         // ----------------------------------------------------
+        // Interceptor para manejar 401 automáticamente
+        // ----------------------------------------------------
+        client.interceptors.response.use(
+            (response) => response,
+            async (error) => {
 
-        while (true) {
-            const { data } = await client.get(endpoint, {
-                params: { page, page_size: 100 }
-            });
+                const originalRequest = error.config;
 
-            all.push(...(data.results || []));
+                if (
+                    error.response?.status === 401 &&
+                    !originalRequest._retry
+                ) {
+                    originalRequest._retry = true;
 
-            if (!data.pagination?.next_page) break;
-            page = data.pagination.next_page;
-        }
+                    try {
+                        // Forzar renovación
+                        const newToken = await this.getToken(company, true);
 
-        return all;
+                        originalRequest.headers.Authorization =
+                            `Bearer ${newToken}`;
+
+                        return client.request(originalRequest);
+                    } catch (refreshError) {
+                        return Promise.reject(refreshError);
+                    }
+                }
+
+                return Promise.reject(error);
+            }
+        );
+        return client;
     }
-
 };
 
 export default SiigoConfig;
