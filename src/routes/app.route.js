@@ -38,6 +38,7 @@ route.post("/branch", BranchController.Create)
 route.get("/branch/:company", BranchController.All)
 
 route.get("/product/by/:company/:code", ProductSiigoController.ByCode)
+route.get("/product/search/:company/:name", ProductSiigoController.ByName)
 
 
 

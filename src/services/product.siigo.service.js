@@ -1,10 +1,76 @@
 import SiigoConfig from "../config/siigo.config.js"
 
 const ProductSiigoService = {
+      async ByName(company, name) {
+        try {
+            const client = await SiigoConfig.createClient(company)
+
+            const response = await client.get(`/products?name=${name}`)
+
+            const products = response.data.results || []
+
+            if (products.length === 0) {
+                return {
+                    code: 404,
+                    message: `No se encontraron productos con el nombre "${name}" en Siigo.`,
+                    data: []
+                }
+            }
+
+            return {
+                code: 200,
+                data: products
+            }
+
+        } catch (error) {
+            console.log("❌ Error completo Siigo (Productos por nombre):", error.response?.data || error.message);
+
+            let userMessage = "ERROR: No se pudieron buscar productos en Siigo.";
+            const status = error.response?.status;
+
+            switch (status) {
+
+                case 400:
+                    userMessage = "El nombre enviado para la búsqueda no es válido.";
+                    break;
+
+                case 401:
+                    userMessage = "La conexión con Siigo expiró. Debes volver a iniciar sesión.";
+                    break;
+
+                case 403:
+                    userMessage = "No tienes permisos suficientes en Siigo para consultar productos.";
+                    break;
+
+                case 429:
+                    userMessage = "Siigo está recibiendo demasiadas peticiones. Espera unos segundos.";
+                    break;
+
+                case 500:
+                case 502:
+                case 503:
+                case 504:
+                    userMessage = "Siigo está teniendo problemas en este momento.";
+                    break;
+
+                default:
+                    userMessage = "Ocurrió un error inesperado consultando productos en Siigo.";
+                    break;
+            }
+
+            return {
+                code: 501,
+                message: userMessage,
+                error: error.message,
+                details: error.response?.data || null
+            };
+        }
+    },
+
     async ByCode (company, code) {
         try {
             const client = await SiigoConfig.createClient(company)
-            const response = await client.get(`/products?code=${code}`)
+            const response = await client.get(`/products?code=${code}&page_size=5`)
             const product = response.data.results[0] || null
 
             // Caso: producto no existe
