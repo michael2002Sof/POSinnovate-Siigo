@@ -6,7 +6,8 @@ const ProductSiigoService = {
             const client = await SiigoConfig.createClient(company)
 
             const limit = 10
-            const pageSize = 25
+            const pageSize = 100
+            const delayMs = 400
 
             let page = 1
             let matches = []
@@ -20,7 +21,7 @@ const ProductSiigoService = {
 
                 const products = response.data.results || []
 
-                if (products.length === 0) {
+                if (!products.length) {
                     hasMore = false
                     break
                 }
@@ -36,22 +37,18 @@ const ProductSiigoService = {
                 }
 
                 page++
+
+                // pequeña pausa para no saturar Siigo
+                await new Promise(resolve => setTimeout(resolve, delayMs))
             }
 
             matches = matches.slice(0, limit)
-
-            if (matches.length === 0) {
-                return {
-                    code: 404,
-                    message: `No se encontraron productos con el nombre "${name}" en Siigo.`,
-                    data: []
-                }
-            }
 
             return {
                 code: 200,
                 data: matches
             }
+
 
         } catch (error) {
             console.log("❌ Error completo Siigo (Productos por nombre):", error.response?.data || error.message);
