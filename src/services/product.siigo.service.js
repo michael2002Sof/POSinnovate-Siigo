@@ -5,13 +5,42 @@ const ProductSiigoService = {
         try {
             const client = await SiigoConfig.createClient(company)
 
-        const response = await client.get(
-            `/products?name=${encodeURIComponent(name)}&page=1&page_size=5`
-        );
+            const limit = 10
+            const pageSize = 25
 
-            const products = response.data.results || []
+            let page = 1
+            let matches = []
+            let hasMore = true
 
-            if (products.length === 0) {
+            while (matches.length < limit && hasMore) {
+
+                const response = await client.get(
+                    `/products?page=${page}&page_size=${pageSize}`
+                )
+
+                const products = response.data.results || []
+
+                if (products.length === 0) {
+                    hasMore = false
+                    break
+                }
+
+                const filtered = products.filter(p =>
+                    p.name?.toLowerCase().includes(name.toLowerCase())
+                )
+
+                matches.push(...filtered)
+
+                if (products.length < pageSize) {
+                    hasMore = false
+                }
+
+                page++
+            }
+
+            matches = matches.slice(0, limit)
+
+            if (matches.length === 0) {
                 return {
                     code: 404,
                     message: `No se encontraron productos con el nombre "${name}" en Siigo.`,
@@ -21,7 +50,7 @@ const ProductSiigoService = {
 
             return {
                 code: 200,
-                data: products
+                data: matches
             }
 
         } catch (error) {
