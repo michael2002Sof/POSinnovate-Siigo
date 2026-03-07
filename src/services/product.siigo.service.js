@@ -6,7 +6,7 @@ const ProductSiigoService = {
             const client = await SiigoConfig.createClient(company)
 
             const response = await client.get(
-                `/products?query=${encodeURIComponent(name)}&page_size=5`
+                `/products?name=${name}&page_size=5`
             )
 
             const products = response.data.results || []
