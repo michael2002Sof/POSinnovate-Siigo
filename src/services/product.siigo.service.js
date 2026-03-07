@@ -5,7 +5,9 @@ const ProductSiigoService = {
         try {
             const client = await SiigoConfig.createClient(company)
 
-            const response = await client.get(`/products?name=${name}`)
+            const response = await client.get(
+                `/products?query=${encodeURIComponent(name)}&page_size=5`
+            )
 
             const products = response.data.results || []
 
@@ -70,7 +72,7 @@ const ProductSiigoService = {
     async ByCode (company, code) {
         try {
             const client = await SiigoConfig.createClient(company)
-            const response = await client.get(`/products?code=${code}&page_size=5`)
+            const response = await client.get(`/products?code=${code}`)
             const product = response.data.results[0] || null
 
             // Caso: producto no existe
