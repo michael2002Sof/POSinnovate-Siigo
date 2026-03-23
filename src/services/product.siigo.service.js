@@ -41,6 +41,7 @@ const ProductSiigoService = {
                     const unit = p.unit_label || "UND"
 
                     // 🧾 impuesto (solo porcentaje)
+                    const tax_id = p.taxes?.[0]?.id || null
                     const tax = p.taxes?.[0]?.percentage || 0
 
 
@@ -56,6 +57,7 @@ const ProductSiigoService = {
                         price1,
                         price2,
                         unit,
+                        tax_id,
                         tax,
                         updated_at
                     ])
@@ -83,7 +85,7 @@ const ProductSiigoService = {
             // ✅ insertar en lote
             await pool.query(
                 `INSERT INTO product 
-                (id, company, code, name, price1, price2, unit, tax, updated_at)
+                (id, company, code, name, price1, price2, unit, tax_id, tax, updated_at)
                 VALUES ?
                 ON DUPLICATE KEY UPDATE
                     code = VALUES(code),
@@ -91,6 +93,7 @@ const ProductSiigoService = {
                     price1 = VALUES(price1),
                     price2 = VALUES(price2),
                     unit = VALUES(unit),
+                    tax_id = VALUES(tax_id),
                     tax = VALUES(tax),
                     updated_at = VALUES(updated_at)`,
                 [values]
