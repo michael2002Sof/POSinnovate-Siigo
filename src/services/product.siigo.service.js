@@ -44,7 +44,9 @@ const ProductSiigoService = {
                     const tax = p.taxes?.[0]?.percentage || 0
 
 
-                    const updated_at = p.metadata?.last_updated || null
+                    const updated_at = p.metadata?.last_updated 
+                        ? new Date(p.metadata.last_updated)
+                        : new Date()
 
                     values.push([
                         p.id,
