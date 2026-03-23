@@ -37,6 +37,8 @@ route.put('/account', AccountSiigoController.UpdatePOS);
 route.post("/branch", BranchController.Create)
 route.get("/branch/:company", BranchController.All)
 
+route.post("/product", ProductSiigoController.create)
+route.get("/product/:company", ProductSiigoController.all)
 route.get("/product/by/:company/:code", ProductSiigoController.ByCode)
 route.get("/product/search/:company/:name", ProductSiigoController.ByName)
 
