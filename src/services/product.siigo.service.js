@@ -81,7 +81,7 @@ const ProductSiigoService = {
             // ✅ insertar en lote
             await pool.query(
                 `INSERT INTO product 
-                (id, company, code, name, price1, price2, tax, updated_at)
+                (id, company, code, name, price1, price2, unit, tax, updated_at)
                 VALUES ?
                 ON DUPLICATE KEY UPDATE
                     code = VALUES(code),
