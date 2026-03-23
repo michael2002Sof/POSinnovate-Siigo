@@ -137,7 +137,7 @@ const ProductSiigoService = {
 
             // 📦 obtener productos
             const [rows] = await pool.query(
-                `SELECT id, code, name, price1, price2, unit, tax
+                `SELECT id, code, name, price1, price2, unit, tax_id, tax
                 FROM product
                 ${whereSql}
                 ORDER BY name ASC
