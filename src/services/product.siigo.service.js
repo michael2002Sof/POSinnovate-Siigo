@@ -41,7 +41,7 @@ const ProductSiigoService = {
                     const unit = p.unit_label || "UND"
 
                     // 🧾 impuesto (solo porcentaje)
-                    const tax_id = p.taxes?.[0]?.id || null
+                    const tax_id = p.taxes?.[0]?.id || 0
                     const tax = p.taxes?.[0]?.percentage || 0
 
 
