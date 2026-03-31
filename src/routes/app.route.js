@@ -41,7 +41,7 @@ route.post("/product", ProductSiigoController.create)
 route.get("/product/:company", ProductSiigoController.all)
 route.get("/product/by/:company/:code", ProductSiigoController.ByCode)
 route.get("/product/search/:company/:name", ProductSiigoController.ByName)
-route.put("product", ProductSiigoController.update)
+route.put("/product", ProductSiigoController.update)
 
 
 
