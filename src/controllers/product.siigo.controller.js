@@ -25,6 +25,11 @@ const ProductSiigoController = {
     async update (req, res) {
         const response = await ProductSiigoService.update(req.body)
         return res.status(response.code).json(response)
+    },
+
+    async stock (req, res) {
+        const response = await ProductSiigoService.stock(req.body)
+        return res.status(response.code).json(response)
     }
 }
 

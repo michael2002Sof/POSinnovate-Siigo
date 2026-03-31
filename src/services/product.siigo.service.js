@@ -145,6 +145,39 @@ const ProductSiigoService = {
                 [...params, limit, offset]
             )
 
+            const productIds = rows.map(p => p.id)
+
+            let stockMap = {}
+
+            if (productIds.length > 0) {
+                const [stockRows] = await pool.query(
+                    `SELECT 
+                        wp.product,
+                        wp.warehouse,
+                        wp.stock,
+                        w.name as warehouse_name
+                    FROM warehouse_product wp
+                    JOIN warehouse w ON w.id = wp.warehouse
+                    WHERE wp.product IN (?)`,
+                    [productIds]
+                )
+
+                // agrupar por producto
+                stockMap = stockRows.reduce((acc, row) => {
+                    if (!acc[row.product]) {
+                        acc[row.product] = []
+                    }
+
+                    acc[row.product].push({
+                        warehouse: row.warehouse,
+                        name: row.warehouse_name,
+                        stock: Number(row.stock)
+                    })
+
+                    return acc
+                }, {})
+            }
+
             // 📊 total para paginación
             const [totalResult] = await pool.query(
                 `SELECT COUNT(*) as total
@@ -154,6 +187,10 @@ const ProductSiigoService = {
             )
 
             const total = totalResult[0].total
+            const data = rows.map(p => ({
+                ...p,
+                warehouses: p.has_stock ? (stockMap[p.id] || []) : []
+            }))
 
             return {
                 code: 200,
@@ -161,7 +198,7 @@ const ProductSiigoService = {
                 limit,
                 total,
                 totalPages: Math.ceil(total / limit),
-                data: rows
+                data
             }
 
         } catch (error) {
@@ -359,6 +396,40 @@ const ProductSiigoService = {
                 message: "No se pudo cambiar el dato de DIAN",
                 error: error.message
             }
+        }
+    },
+
+    async stock (data) {
+        const connection = await pool.getConnection()
+        try {
+            const {product, warehouse, stock} = data
+            await connection.beginTransaction()
+            
+            await connection.query(
+                `INSERT INTO warehouse_product (product, warehouse, stock)
+                VALUES (?, ?, ?)
+                ON DUPLICATE KEY UPDATE stock = stock + VALUES(stock)`,
+                [product, warehouse, stock]
+            )
+
+            await connection.query(
+                `UPDATE product SET has_stock = 1 WHERE id = ?`,
+                [product]
+            )
+
+            await connection.commit()
+
+            return { code: 200, message: "Stock creado con éxito" }
+        } catch (error) {
+            await connection.rollback()
+
+            return {
+                code: 500,
+                message: "No se pudo crear el stock del producto",
+                error: error.message
+            }
+        } finally {
+            connection.release()
         }
     }
 }
