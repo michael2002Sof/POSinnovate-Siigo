@@ -44,6 +44,8 @@ const ProductSiigoService = {
                     const tax_id = p.taxes?.[0]?.id || 0
                     const tax = p.taxes?.[0]?.percentage || 0
 
+                    const category = p.reference
+
 
                     const updated_at = p.metadata?.last_updated 
                         ? new Date(p.metadata.last_updated)
@@ -59,6 +61,7 @@ const ProductSiigoService = {
                         unit,
                         tax_id,
                         tax,
+                        category,
                         updated_at
                     ])
                 }
@@ -85,7 +88,7 @@ const ProductSiigoService = {
             // ✅ insertar en lote
             await pool.query(
                 `INSERT INTO product 
-                (id, company, code, name, price1, price2, unit, tax_id, tax, updated_at)
+                (id, company, code, name, price1, price2, unit, tax_id, tax, category, updated_at)
                 VALUES ?
                 ON DUPLICATE KEY UPDATE
                     code = VALUES(code),
@@ -95,6 +98,7 @@ const ProductSiigoService = {
                     unit = VALUES(unit),
                     tax_id = VALUES(tax_id),
                     tax = VALUES(tax),
+                    category = VALUES(category),
                     updated_at = VALUES(updated_at)`,
                 [values]
             )
@@ -111,7 +115,7 @@ const ProductSiigoService = {
 
     async all(company, query) {
         try {
-            let { page = 1, limit = 20, name = "", code = "" } = query
+            let { page = 1, limit = 20, name = "", code = "", category = "" } = query
 
             // 🔒 asegurar límites
             page = parseInt(page)
@@ -127,6 +131,11 @@ const ProductSiigoService = {
                 where.push("code = ?")
                 params.push(code)
             } 
+
+            if (category) {
+                where.push("category = ?")
+                params.push(category)
+            }
             // 🔍 búsqueda por nombre (LIKE)
             else if (name) {
                 where.push("LOWER(name) LIKE ?")
@@ -137,7 +146,7 @@ const ProductSiigoService = {
 
             // 📦 obtener productos
             const [rows] = await pool.query(
-                `SELECT id, code, name, price1, price2, unit, tax_id, tax, dian, has_stock
+                `SELECT id, code, name, price1, price2, unit, tax_id, tax, category, dian, has_stock
                 FROM product
                 ${whereSql}
                 ORDER BY name ASC
