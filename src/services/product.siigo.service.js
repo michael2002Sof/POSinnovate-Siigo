@@ -332,6 +332,34 @@ const ProductSiigoService = {
                 details: error.response?.data || null
             };
         }
+    },
+
+    async update (data) {
+        try {
+            const { id, dian } = data
+            const [result] = await pool.query(
+                `UPDATE product SET dian = ? WHERE id = ?`,
+                [dian, id]
+            )
+
+            if (result.affectedRows === 0) {
+                return {
+                    code: 404,
+                    message: "Producto no encontrado"
+                }
+            }
+
+            return {
+                code: 200, 
+                message: "Producto actualizado con éxito"
+            }
+        } catch (error) {
+            return {
+                code: 500,
+                message: "No se pudo cambiar el dato de DIAN",
+                error: error.message
+            }
+        }
     }
 }
 

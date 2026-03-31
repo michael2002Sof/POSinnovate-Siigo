@@ -20,6 +20,11 @@ const ProductSiigoController = {
         const {company, name} = req.params
         const response = await ProductSiigoService.ByName(company, name)
         return res.status(response.code).json(response)
+    },
+
+    async update (req, res) {
+        const response = await ProductSiigoService.update(req.body)
+        return res.status(response.code).json(response)
     }
 }
 
