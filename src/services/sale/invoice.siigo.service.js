@@ -128,6 +128,14 @@ const InvoiceSiigoService = {
                         item.tax19, item.total
                     ]
                 );
+                if (!item.dian && item.has_stock) {
+                    await pool.query(
+                        `UPDATE warehouse_product 
+                        SET stock = stock - ? 
+                        WHERE warehouse = ?`,
+                        [item.quantity, item.warehouse]
+                    )
+                }
             }
 
             // Consultas necesarias
