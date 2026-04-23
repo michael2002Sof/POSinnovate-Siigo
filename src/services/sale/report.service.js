@@ -132,6 +132,7 @@ const ReportService = {
                     
                     SUM(cs.total_cash) AS total_cash,
                     SUM(cs.total_transfer) AS total_transfer,
+                    SUM(cs.total_datafono) AS total_datafono,
                     SUM(cs.total_return) AS total_return,
                     SUM(cs.total) AS total_sales,
 
