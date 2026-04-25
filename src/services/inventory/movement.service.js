@@ -7,7 +7,9 @@ const MovementServices = {
             const limit = Number(query.limit) || 20;
             const offset = (page - 1) * limit;
 
-            const { from, to } = query;
+            console.log(company, query)
+
+            const { from } = query;
 
             let filters = `
                 WHERE p.company = ?
@@ -18,9 +20,9 @@ const MovementServices = {
             let params = [company];
 
             // Filtro por fechas
-            if (from && to) {
-                filters += ` AND si.created_at BETWEEN ? AND ?`;
-                params.push(`${from} 00:00:00`, `${to} 23:59:59`);
+            if (from) {
+                filters += ` AND DATE(si.created_at) = ?`;
+                params.push(from);
             }
 
             const [countResult] = await pool.query(
