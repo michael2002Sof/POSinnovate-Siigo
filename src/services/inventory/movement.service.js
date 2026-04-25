@@ -7,10 +7,9 @@ const MovementServices = {
             const limit = Number(query.limit) || 20;
             const offset = (page - 1) * limit;
 
-            console.log(company, query)
-
             const { from } = query;
 
+            // 🔹 Filtros base
             let filters = `
                 WHERE p.company = ?
                 AND p.dian = 0
@@ -19,12 +18,13 @@ const MovementServices = {
 
             let params = [company];
 
-            // Filtro por fechas
             if (from) {
+                const fromDate = from.split("T")[0]; // normalizar fecha
                 filters += ` AND DATE(si.created_at) = ?`;
-                params.push(from);
+                params.push(fromDate);
             }
 
+            // 🔹 1. TOTAL DE FACTURAS (NO ITEMS)
             const [countResult] = await pool.query(
                 `
                 SELECT COUNT(DISTINCT si.id) AS total
@@ -39,17 +39,10 @@ const MovementServices = {
             const total = countResult[0].total;
             const totalPages = Math.ceil(total / limit);
 
-            const [rows] = await pool.query(
+            // 🔹 2. PAGINAR POR FACTURAS
+            const [invoiceIdsResult] = await pool.query(
                 `
-                SELECT 
-                    si.id AS invoice_id,
-                    si.created_at,
-                    si.customer_name,
-                    sii.product_barcode,
-                    sii.quantity,
-                    p.name AS product_name,
-                    p.code AS product_code,
-                    p.dian
+                SELECT DISTINCT si.id
                 FROM sale_invoice_item sii
                 INNER JOIN sale_invoice si ON sii.invoice = si.id
                 INNER JOIN product p ON p.code = sii.product_barcode
@@ -60,15 +53,46 @@ const MovementServices = {
                 [...params, limit, offset]
             );
 
-            // 🔥 Agrupar por factura
+            const invoiceIds = invoiceIdsResult.map(r => r.id);
+
+            if (invoiceIds.length === 0) {
+                return {
+                    code: 200,
+                    data: [],
+                    pages: totalPages
+                };
+            }
+
+            // 🔹 3. TRAER TODOS LOS ITEMS DE ESAS FACTURAS
+            const [rows] = await pool.query(
+                `
+                SELECT 
+                    si.id AS invoice_id,
+                    si.created_at,
+                    si.code,
+                    si.customer_name,
+                    p.name AS product_name,
+                    p.code AS product_code,
+                    p.dian,
+                    sii.quantity
+                FROM sale_invoice_item sii
+                INNER JOIN sale_invoice si ON sii.invoice = si.id
+                INNER JOIN product p ON p.code = sii.product_barcode
+                WHERE si.id IN (${invoiceIds.map(() => '?').join(',')})
+                ORDER BY si.id DESC
+                `,
+                invoiceIds
+            );
+
+            // 🔹 4. AGRUPAR POR FACTURA
             const grouped = {};
 
             for (const row of rows) {
                 if (!grouped[row.invoice_id]) {
                     grouped[row.invoice_id] = {
                         type: "sale",
-                        code: row.invoice_id,
-                        customer: row.customer_name || "N/A",
+                        code: row.code, // código de factura real
+                        customer: row.customer_name || "Consumidor Final",
                         created_at: row.created_at,
                         items: []
                     };
@@ -82,23 +106,22 @@ const MovementServices = {
                 });
             }
 
-            // Convertir a array
             const result = Object.values(grouped);
 
             return {
                 code: 200,
                 data: result,
-                pages: totalPages
-                
+                pages: totalPages,
+                total
             };
 
         } catch (error) {
             console.error(error);
             return {
-                code: 501,
-                message: "No se pudo traer la informacion de movimiento",
+                code: 500,
+                message: "Error al obtener movimientos de inventario",
                 error: error.message
-            }
+            };
         }
     }
 };
