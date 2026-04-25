@@ -132,8 +132,8 @@ const InvoiceSiigoService = {
                     await pool.query(
                         `UPDATE warehouse_product 
                         SET stock = stock - ? 
-                        WHERE warehouse = ?`,
-                        [item.quantity, item.warehouse]
+                        WHERE product = ? AND warehouse = ?`,
+                        [item.quantity, item.id, item.warehouse]
                     )
                 }
             }
