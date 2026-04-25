@@ -10,89 +10,30 @@ const MovementServices = {
 
             const { from } = query;
 
-            let filters = `
-                WHERE si.company = ?
-                AND si.reference_invoice IS NULL
-            `;
-
-            let params = [company];
-
-            if (from) {
-                const fromDate = from.split("T")[0];
-                filters += ` AND DATE(si.created_at) = ?`;
-                params.push(fromDate);
-            }
-
-            // 🔥 1. SOLO FACTURAS QUE TENGAN AL MENOS UN PRODUCTO NO DIAN
-            const dianCondition = `
-                EXISTS (
-                    SELECT 1
-                    FROM sale_invoice_item sii2
-                    INNER JOIN product p2 
-                        ON p2.code = sii2.product_barcode
-                        AND p2.company = si.company
-                    WHERE sii2.invoice = si.id
-                    AND p2.dian = 0
-                )
-            `;
-
             // 🔹 TOTAL
-            const [countResult] = await pool.query(
-                `
-                SELECT COUNT(*) AS total
-                FROM sale_invoice si
-                ${filters} AND ${dianCondition}
-                `,
-                params
-            );
-
-            const total = countResult[0].total;
+            const total = 10;
             const totalPages = Math.ceil(total / limit);
 
-            // 🔹 PAGINACIÓN DE FACTURAS
-            const [invoiceIdsResult] = await pool.query(
-                `
-                SELECT si.id
-                FROM sale_invoice si
-                ${filters} AND ${dianCondition}
-                ORDER BY si.id DESC
-                LIMIT ? OFFSET ?
-                `,
-                [...params, limit, offset]
-            );
-
-            const invoiceIds = invoiceIdsResult.map(r => r.id);
-
-            if (invoiceIds.length === 0) {
-                return {
-                    code: 200,
-                    data: [],
-                    pages: totalPages
-                };
-            }
-
-            // 🔥 2. TRAER TODOS LOS ITEMS (NO SOLO NO DIAN)
-            const [rows] = await pool.query(
-                `
+            const [rows] = await pool.query(`
                 SELECT 
-                    si.id AS invoice_id,
-                    si.created_at,
-                    si.code,
-                    si.customer_name,
-                    p.name AS product_name,
-                    p.code AS product_code,
-                    p.dian,
+                    si.id AS invoice_id, 
+                    si.created_at, 
+                    si.code, 
+                    si.customer_name, 
+                    p.name AS product_name, 
+                    p.code AS product_code, 
+                    p.dian, 
+                    u.name AS seller,
                     sii.quantity
                 FROM sale_invoice_item sii
                 INNER JOIN sale_invoice si ON sii.invoice = si.id
-                INNER JOIN product p 
-                    ON p.code = sii.product_barcode
-                    AND p.company = si.company
-                WHERE si.id IN (${invoiceIds.map(() => '?').join(',')})
-                ORDER BY si.id DESC
-                `,
-                invoiceIds
-            );
+                INNER JOIN user u ON u.id = si.seller 
+                INNER JOIN product p ON p.code = sii.product_barcode
+                WHERE si.company = ? AND DATE(si.created_at) = ? AND p.dian = 0 AND si.reference_invoice IS NULL
+                LIMIT ?
+                OFFSET ?
+            `, [company, from, limit, offset])
+
 
             // 🔹 AGRUPAR
             const grouped = {};
@@ -102,6 +43,7 @@ const MovementServices = {
                     grouped[row.invoice_id] = {
                         type: "sale",
                         code: row.code,
+                        seller: row.seller,
                         customer: row.customer_name || "Consumidor Final",
                         created_at: moment(row.created_at).format("YYYY-MM-DD hh:mm A"),
                         items: []
