@@ -3,6 +3,7 @@ import cors from "cors"
 
 import { Conexion } from "./database/conexion.js"
 import AppRoutes from "./routes/app.route.js"
+import "./jobs/runLedger.js"
 
 const app = express();
 app.init = async () => {

@@ -4,6 +4,10 @@ const MovementController = {
     async All(req, res) {
         const response = await MovementServices.All(req.params.company, req.query)
         return res.status(response.code).json(response)
+    },
+    async AllProduct(req, res) {
+        const response = await MovementServices.AllProduct(req.params.company, req.query)
+        return res.status(response.code).json(response)
     }
 }
 
