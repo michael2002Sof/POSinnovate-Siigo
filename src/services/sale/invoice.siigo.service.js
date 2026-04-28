@@ -135,6 +135,15 @@ const InvoiceSiigoService = {
                         WHERE product = ? AND warehouse = ?`,
                         [item.quantity, item.id, item.warehouse]
                     )
+
+                    await pool.query(
+                        `UPDATE inventory_ledger 
+                        SET 
+                            exits = exits + ?,
+                            closing_stock = closing_stock - ?
+                        WHERE product = ? AND warehouse = ? AND date = CURDATE()`,
+                        [item.quantity, item.quantity, item.id, item.warehouse]
+                    )
                 }
             }
 
