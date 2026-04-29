@@ -414,6 +414,7 @@ const ProductSiigoService = {
             const {product, warehouse, stock} = data
             await connection.beginTransaction()
             
+            // 1. Actualiza stock acumulado
             await connection.query(
                 `INSERT INTO warehouse_product (product, warehouse, stock)
                 VALUES (?, ?, ?)
@@ -421,6 +422,32 @@ const ProductSiigoService = {
                 [product, warehouse, stock]
             )
 
+            // 2. Determinar tipo de movimiento
+            let entries = 0
+            let exits = 0
+            let closingAdjustment = 0
+
+            if (Number(stock) > 0) {
+                entries = stock
+                closingAdjustment = stock
+            } else if (Number(stock) < 0) {
+                exits = Math.abs(stock)
+                closingAdjustment = stock // negativo
+            }
+
+            // 3. Registrar en ledger del día
+            await connection.query(
+                `INSERT INTO inventory_ledger 
+                    (product, warehouse, date, entries, exits, closing_stock)
+                VALUES (?, ?, CURDATE(), ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    entries = entries + VALUES(entries),
+                    exits = exits + VALUES(exits),
+                    closing_stock = closing_stock + VALUES(closing_stock)`,
+                [product, warehouse, entries, exits, closingAdjustment]
+            )
+
+            // 4. Asegurar flag
             await connection.query(
                 `UPDATE product SET has_stock = 1 WHERE id = ?`,
                 [product]
