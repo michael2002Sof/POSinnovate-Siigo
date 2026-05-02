@@ -24,7 +24,9 @@ const MovementServices = {
                     p.code AS product_code, 
                     p.dian, 
                     u.name AS seller,
-                    sii.quantity
+                    sii.quantity,
+                    sii.unit_price,
+                    sii.total
                 FROM sale_invoice_item sii
                 INNER JOIN sale_invoice si ON sii.invoice = si.id
                 INNER JOIN user u ON u.id = si.seller 
@@ -33,6 +35,8 @@ const MovementServices = {
                 LIMIT ?
                 OFFSET ?
             `, [company, from, limit, offset])
+
+            console.log("datos obtenidos: ", rows)
 
 
             // 🔹 AGRUPAR
@@ -46,16 +50,24 @@ const MovementServices = {
                         seller: row.seller,
                         customer: row.customer_name || "Consumidor Final",
                         created_at: moment(row.created_at).format("YYYY-MM-DD hh:mm A"),
-                        items: []
+                        items: [],
+                        total: 0
                     };
                 }
+
+                const itemTotal = Number(row.total || 0);
 
                 grouped[row.invoice_id].items.push({
                     name: row.product_name,
                     code: row.product_code,
                     quantity: Number(row.quantity),
+                    unit_price: Number(row.unit_price),
+                    total: itemTotal,
                     dian: Boolean(row.dian)
                 });
+
+                // ACUMULAR TOTAL POR FACTURA
+                grouped[row.invoice_id].total += itemTotal;
             }
 
             return {
