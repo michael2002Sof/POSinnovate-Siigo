@@ -1,11 +1,10 @@
-// src/config/siigo.config.js
-
 import axios from "axios";
+import { jwtDecode } from "jwt-decode"
 import { pool } from "../database/conexion.js";
 
 const tokenCache = new Map(); // Cache por empresa
 const SIIGO_REQUEST_TIMEOUT = 60000;
-const TOKEN_BUFFER_SECONDS = 60; // renovar 1 minuto antes
+const TOKEN_BUFFER_SECONDS = 60; // Renovar 1 minuto antes de que expire
 
 const SiigoConfig = {
 
@@ -21,108 +20,123 @@ const SiigoConfig = {
             LIMIT 1`,
             [company]
         );
+
+        //console.log("Credenciales pedidas:", rows[0])
         return rows[0] || null;
     },
 
     // ----------------------------------------------------
-    // Obtener token válido (con cache inteligente)
+    // Obtener token válido (con caché inteligente)
     // ----------------------------------------------------
     async getToken(company, forceRefresh = false) {
-   
         const cached = tokenCache.get(company);
 
-        // Si existe y no está vencido, usarlo
-        if (
-            !forceRefresh &&
-            cached && 
-            cached.expires > new Date()
-        ) {
+        // Si existe en caché y no está vencido, usarlo
+        if (!forceRefresh && cached && cached.expires > new Date()) {
             return cached.token;
         }
 
         const credentials = await this.getCredentials(company);
         if (!credentials) {
-            throw new Error("No se encontraron credenciales de Siigo");
+            throw new Error(`No se encontraron credenciales de Siigo para la empresa: ${company}`);
         }
 
         try {
+            // Limpiamos posibles espacios en blanco invisibles de la DB
+            const username = credentials.email.trim();
+            const access_key = credentials.api_key.trim();
+
+            console.log("Intentando autenticar con Siigo...");
+
             const { data } = await axios.post(
                 "https://api.siigo.com/auth", 
-                {
-                    username: credentials.email,
-                    access_key: credentials.api_key,
-                },
+                { username, access_key },
                 { timeout: SIIGO_REQUEST_TIMEOUT }
             );
+
+            const payload = jwtDecode(data.access_token);
+            //console.log("Token decodificado:", payload);
+
+            //console.log("Informacion del token:", data)
             
             if (!data?.access_token) {
-                throw new Error("Siigo no devolvió access_token");
+                throw new Error("Siigo autenticó pero no devolvió el campo 'access_token'");
             }
 
-            const expiresIn = data.expires_in || 3600
+            const expiresIn = data.expires_in || 3600;
 
-            //Restamos buffer de seguridad
+            // Restamos el buffer de seguridad
             const expires = new Date(
                 Date.now() + (expiresIn - TOKEN_BUFFER_SECONDS) * 1000
-            )
+            );
 
             tokenCache.set(company, {
                 token: data.access_token,
                 expires
-            })
+            });
 
-            return data.access_token
+            //console.log(`[Siigo Auth] Token generado exitosamente para: ${company}`);
+            return data.access_token;
+            
         } catch (error) {
+            // Si falla la autenticación, limpiamos la caché por seguridad
+            console.error("ERROR COMPLETO:", error);
+
+            console.error("response:", error.response?.data);
+            console.error("status:", error.response?.status);
+            console.error("message:", error.message);
             tokenCache.delete(company);
-            throw new Error(
-                `Error generando token Siigo: ${error.response?.data?.message || error.message}`
-            );
+            
+            const errorDetail = error.response?.data?.Message || error.response?.data?.Errors?.[0]?.Message || error.message;
+            throw new Error(`[Siigo Auth Error]: ${errorDetail}`);
         }
     },
 
     // ----------------------------------------------------
-    // 🔧 Crear cliente Axios para Siigo
+    // Crear cliente Axios para Siigo
     // ----------------------------------------------------
     async createClient(company) {
         const token = await this.getToken(company);
-        if(!token) {
-            throw new Error("No se pudo obtener token válido de Siigo");
+        if (!token) {
+            throw new Error("No se pudo obtener un token válido de Siigo");
         }
 
         const client = axios.create({
-            baseURL: "https://api.siigo.com/v1/",
+            baseURL: "https://api.siigo.com/v1/", // Sin barra diagonal al final para evitar conflictos de rutas
             timeout: SIIGO_REQUEST_TIMEOUT,
             headers: {
-                Authorization: `Bearer ${token}`,
+                "Authorization": `Bearer ${token}`,
                 "Content-Type": "application/json",
                 "Partner-Id": "POSMundoCarnes",
             }
         });
 
-         // ----------------------------------------------------
+        // ----------------------------------------------------
         // Interceptor para manejar 401 automáticamente
         // ----------------------------------------------------
         client.interceptors.response.use(
             (response) => response,
             async (error) => {
-
                 const originalRequest = error.config;
 
-                if (
-                    error.response?.status === 401 &&
-                    !originalRequest._retry
-                ) {
+                // Si es un 401 y no hemos intentado reintentar todavía
+                if (error.response?.status === 401 && !originalRequest._retry) {
                     originalRequest._retry = true;
+                    console.warn(`[Siigo Interceptor] Detectado 401 en ${originalRequest.url}. Intentando renovar token...`);
 
                     try {
-                        // Forzar renovación
+                        // Forzar la renovación del token en la caché e itinerario
                         const newToken = await this.getToken(company, true);
 
-                        originalRequest.headers.Authorization =
-                            `Bearer ${newToken}`;
-
-                        return client.request(originalRequest);
+                        // Actualizar la cabecera del request original
+                        originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
+                        
+                        // IMPORTANTE: Usamos la instancia global de axios para el reintento.
+                        // Esto evita bucles infinitos si las credenciales de la DB están mal y el token nuevo sigue dando 401.
+                        return axios(originalRequest); 
+                        
                     } catch (refreshError) {
+                        console.error("[Siigo Interceptor] Falló la renovación del token en el reintento.");
                         return Promise.reject(refreshError);
                     }
                 }
@@ -130,6 +144,7 @@ const SiigoConfig = {
                 return Promise.reject(error);
             }
         );
+
         return client;
     }
 };

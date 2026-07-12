@@ -167,10 +167,16 @@ const ReportService = {
         }
     },
 
-    async InvoiceByDate(date, company, user, page) {
+    async InvoiceByDate(query) {
         try {
-            const pageSize = 7
+            const page = Number(query?.page) || 1
+            const pageSize = 10
             const offset = (page - 1) * pageSize
+
+            const user = Number(query?.user) || null
+            const date = query?.date || moment().format("YYYY-MM-DD")
+            const company = Number(query?.company) || null
+            const pos = Boolean(query?.pos) || null
 
             const [adminCheck] = await pool.query(`SELECT id FROM admin WHERE id = ? LIMIT 1`, [user])
             
@@ -179,6 +185,9 @@ const ReportService = {
             if (adminCheck.length === 0) {
                 whereCondition += ` AND seller = ?`
                 queryParams.push(user)
+            }
+            if (query.pos) {
+                whereCondition += ` AND code LIKE '%POS%'`
             }
             const [invoices] = await pool.query(
                 `SELECT * FROM sale_invoice WHERE ${whereCondition} ORDER BY id DESC LIMIT ${pageSize} OFFSET ${offset}`, queryParams
@@ -215,6 +224,7 @@ const ReportService = {
 
                 // 4.5 Construir estructura EXACTA como CreatePOS
                 result.push({
+                    id: inv.id,
                     code: inv.code,
                     caja: salePointData.name,
                     created_at: moment(inv.created_at).format("YYYY-MM-DD hh:mm A"),
@@ -248,6 +258,7 @@ const ReportService = {
                 } 
             };
         } catch (error) {
+            console.error(error)
             return { code: 500, message: "Error al obtener las facturas por fecha", error: error.message };
         }
     },

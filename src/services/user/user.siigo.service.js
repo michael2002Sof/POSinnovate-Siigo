@@ -10,6 +10,19 @@ const  UserSiigoService = {
       const users = await client.get("users");
       return {code: 201, data: users.data.results}
     } catch (error) {
+      // 1. Error de respuesta de la API de Siigo (El servidor respondió con un status != 2xx)
+      if (error.response) {
+        console.error("Error de Siigo API:", error.response.data);
+        
+        // Siigo suele estructurar sus errores con un array de 'Errors' o un 'Message'
+        const siigoErrors = error.response.data.Errors || error.response.data.message;
+        
+        return { 
+          code: error.response.status, 
+          message: "Error al consultar en Siigo",
+          details: siigoErrors 
+        }
+      }
       return { code: 501, message: "ERROR: No se pudieron traer los usuarios de siigo"}
     }
   },

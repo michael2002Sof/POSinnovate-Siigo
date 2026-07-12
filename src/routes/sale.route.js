@@ -34,7 +34,7 @@ route.get("/invoice/resolution/pos/:company", InvoiceResolutionController.AllPOS
 
 route.get("/report/by/:id", ReportController.SaleSessionById)
 route.get("/report/day/:date/:company", ReportController.SessionByDate)
-route.get("/report/invoice/pos/by/:date/:company/:user/:page", ReportController.InvoiceByDate)
+route.get("/report/invoice/pos", ReportController.InvoiceByDate)
 route.get("/report/invoice/pos/by/:date/:company/:user", ReportController.InvoiceToExport)
 route.get("/report/session/:company/:from/:to", ReportController.SessionStatistic)
 

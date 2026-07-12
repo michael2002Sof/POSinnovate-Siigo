@@ -13,6 +13,8 @@ import CustomerSiigoController from "../controllers/customer.siigo.controller.js
 import AccountSiigoController from "../controllers/account.siigo.controller.js"
 import CreditNoteSiigoController from "../controllers/creditnote.siigo.controller.js"
 
+import synchronizationController from "../app/synchronization/synchronization.controller.js"
+
 import qzTray from "../config/qzTray.js"
 
 
@@ -52,6 +54,8 @@ route.get("/creditnote/by/:company/:date", CreditNoteSiigoController.ByDate)
 route.get("/customer/by/:company/:identification", CustomerSiigoController.ByIdentification)
 
 route.post("/qz/sign", qzTray.key)
+
+route.post("/sync/invoice", synchronizationController.synchInvoices)
 
 
 export default route
