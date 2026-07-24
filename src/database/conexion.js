@@ -14,12 +14,24 @@ export const pool = mysql.createPool({
     queueLimit: 0
 })
 
-export async function Conexion() {
+export async function Conexion(retries = 5) {
     try {
-        const connection = await pool.getConnection()
-        console.log("✅ Conectado a la base de datos");
-        connection.release();  
-    } catch (error) {
-        console.error("❌ Error de conexión:", error);
+        const conn = await pool.getConnection()         // Obtiene una conexión del pool
+        await conn.ping()                               // Verifica comunicación con MySQL
+        conn.release()                                  // Devuelve la conexión al pool
+
+        console.log(`MySQL conectado a ${process.env.DB_NAME}`)
+    } catch (err) {
+        console.log(`Error conectado MySQL`)
+
+        if (retries <= 0) {
+            logger.error("Base de datos imposible de conectar", err)
+            process.exit(1)                             // Detiene la aplicación si no hay DB
+        }
+
+        console.log(`Reintentando conexión DB (${retries})...`)
+        await new Promise(r => setTimeout(r, 3000))     // Espera 3 segundos
+
+        return Conexion(retries - 1)            // Reintento recursivo
     }
 }
