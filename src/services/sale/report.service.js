@@ -1,6 +1,105 @@
 import { pool } from "../../database/conexion.js";
 import moment from "moment-timezone";
 
+async function getSessionBreakdownMap(sessionIds) {
+    if (!sessionIds || sessionIds.length === 0) return new Map();
+
+    const [rows] = await pool.query(
+        `SELECT 
+            cash_session,
+            type,
+            COUNT(*) AS count,
+            IFNULL(SUM(receipt_cash), 0) AS cash,
+            IFNULL(SUM(receipt_transfer), 0) AS transfer,
+            IFNULL(SUM(receipt_davivienda), 0) AS davivienda,
+            IFNULL(SUM(receipt_datafono), 0) AS datafono,
+            IFNULL(SUM(subtotal), 0) AS subtotal,
+            IFNULL(SUM(tax0), 0) AS tax0,
+            IFNULL(SUM(tax5), 0) AS tax5,
+            IFNULL(SUM(tax19), 0) AS tax19,
+            IFNULL(SUM(total), 0) AS total
+        FROM sale_invoice 
+        WHERE cash_session IN (?)
+        GROUP BY cash_session, type`,
+        [sessionIds]
+    );
+
+    const map = new Map();
+
+    for (const sid of sessionIds) {
+        const idNum = Number(sid);
+        const invRow = rows.find(r => Number(r.cash_session) === idNum && r.type === "invoice") || {};
+        const cnRow = rows.find(r => Number(r.cash_session) === idNum && r.type === "credit-note") || {};
+
+        const cashPayment = Number(invRow.cash) || 0;
+        const cashCredit = Number(cnRow.cash) || 0;
+
+        const transferPayment = Number(invRow.transfer) || 0;
+        const transferCredit = Number(cnRow.transfer) || 0;
+
+        const daviviendaPayment = Number(invRow.davivienda) || 0;
+        const daviviendaCredit = Number(cnRow.davivienda) || 0;
+
+        const datafonoPayment = Number(invRow.datafono) || 0;
+        const datafonoCredit = Number(cnRow.datafono) || 0;
+
+        const totalSalesCount = Number(invRow.count) || 0;
+        const totalCreditNotesCount = Number(cnRow.count) || 0;
+
+        const subtotal = (Number(invRow.subtotal) || 0) - (Number(cnRow.subtotal) || 0);
+        const tax0 = (Number(invRow.tax0) || 0) - (Number(cnRow.tax0) || 0);
+        const tax5 = (Number(invRow.tax5) || 0) - (Number(cnRow.tax5) || 0);
+        const tax19 = (Number(invRow.tax19) || 0) - (Number(cnRow.tax19) || 0);
+        const total = (Number(invRow.total) || 0) - (Number(cnRow.total) || 0);
+
+        const totalReturn = Number(cnRow.total) || 0;
+        const subtotalMethod = cashPayment + transferPayment + daviviendaPayment + datafonoPayment;
+        const totalMethod = subtotalMethod - totalReturn;
+
+        map.set(idNum, {
+            cash: {
+                payment: cashPayment,
+                credit: cashCredit,
+                total: cashPayment - cashCredit
+            },
+            transfer: {
+                payment: transferPayment,
+                credit: transferCredit,
+                total: transferPayment - transferCredit
+            },
+            datafono: {
+                payment: datafonoPayment,
+                credit: datafonoCredit,
+                total: datafonoPayment - datafonoCredit
+            },
+            davivienda: {
+                payment: daviviendaPayment,
+                credit: daviviendaCredit,
+                total: daviviendaPayment - daviviendaCredit
+            },
+            totalSalesCount,
+            totalCreditNotesCount,
+            totalSales: totalSalesCount,
+            dynamicTotals: {
+                total_cash: cashPayment,
+                total_transfer: transferPayment,
+                total_davivienda: daviviendaPayment,
+                total_datafono: datafonoPayment,
+                total_return: totalReturn,
+                subtotal_method: subtotalMethod,
+                total_method: totalMethod,
+                subtotal,
+                tax0,
+                tax5,
+                tax19,
+                total
+            }
+        });
+    }
+
+    return map;
+}
+
 const ReportService = {
     async SaleSessionById(id) {
         try {
@@ -18,6 +117,7 @@ const ReportService = {
                 cs.initial_cash,
                 cs.total_cash,
                 cs.total_transfer,
+                cs.total_davivienda,
                 cs.total_datafono,
                 cs.subtotal_method,
                 cs.total_return,
@@ -35,29 +135,55 @@ const ReportService = {
                 WHERE cs.id = ?`,
                 [id]
             );
-               // Convertir fechas a "America/Bogota" ANTES de enviarlas al frontend
-            const [[totalSales]] = await pool.query(`SELECT COUNT(id) AS count FROM sale_invoice WHERE cash_session = ?`, id)
+
+            if (!row) {
+                return { code: 404, message: "Sesión de caja no encontrada" };
+            }
+
+            const breakdownMap = await getSessionBreakdownMap([id]);
+            const breakdown = breakdownMap.get(Number(id)) || {};
+
             const session = {
                 ...row,
-                totalSales: totalSales.count,
+                total_cash: breakdown.dynamicTotals?.total_cash ?? row.total_cash,
+                total_transfer: breakdown.dynamicTotals?.total_transfer ?? row.total_transfer,
+                total_davivienda: breakdown.dynamicTotals?.total_davivienda ?? row.total_davivienda,
+                total_datafono: breakdown.dynamicTotals?.total_datafono ?? row.total_datafono,
+                total_return: breakdown.dynamicTotals?.total_return ?? row.total_return,
+                subtotal_method: breakdown.dynamicTotals?.subtotal_method ?? row.subtotal_method,
+                total_method: breakdown.dynamicTotals?.total_method ?? row.total_method,
+                subtotal: breakdown.dynamicTotals?.subtotal ?? row.subtotal,
+                tax0: breakdown.dynamicTotals?.tax0 ?? row.tax0,
+                tax5: breakdown.dynamicTotals?.tax5 ?? row.tax5,
+                tax19: breakdown.dynamicTotals?.tax19 ?? row.tax19,
+                total: breakdown.dynamicTotals?.total ?? row.total,
+
+                cash: breakdown.cash || { payment: 0, credit: 0, total: 0 },
+                transfer: breakdown.transfer || { payment: 0, credit: 0, total: 0 },
+                datafono: breakdown.datafono || { payment: 0, credit: 0, total: 0 },
+                davivienda: breakdown.davivienda || { payment: 0, credit: 0, total: 0 },
+
+                totalSales: breakdown.totalSalesCount ?? 0,
+                totalCreditNotes: breakdown.totalCreditNotesCount ?? 0,
+
                 opened_at: row.opened_at 
                     ? moment(row.opened_at).format("YYYY-MM-DD HH:mm A")
                     : null,
                 closed_at: row.closed_at 
                     ? moment(row.closed_at).format("YYYY-MM-DD HH:mm A")
                     : null
-            }
-            return {success: true, code:201, data: session};
+            };
+
+            return { success: true, code: 201, data: session };
     
         } catch (error) {
             console.error("Error al obtener la session abierta:", error);
-            return { code: 501, message: "Error al obtener la session abierta", error: error.message }
+            return { code: 501, message: "Error al obtener la session abierta", error: error.message };
         }
     },
 
     async SessionByDate(date, company) {
         try {
-
             // Consulta: busca sesiones de caja del día especificado
             const [rows] = await pool.query(
             `SELECT 
@@ -93,29 +219,45 @@ const ReportService = {
             [date, company]
             );
 
-            // Convertir fechas a "America/Bogota" ANTES de enviarlas al frontend
-            const sesiones = []
+            const sessionIds = rows.map(s => s.id);
+            const breakdownMap = await getSessionBreakdownMap(sessionIds);
+
+            const sesiones = [];
 
             for (const s of rows) {
-                const [[totalSales]] = await pool.query(
-                    `SELECT COUNT(id) AS count
-                    FROM sale_invoice
-                    WHERE cash_session = ?`,
-                    [s.id]
-                )
-            
+                const breakdown = breakdownMap.get(Number(s.id)) || {};
+
                 sesiones.push({
                     ...s,
+                    total_cash: breakdown.dynamicTotals?.total_cash ?? s.total_cash,
+                    total_transfer: breakdown.dynamicTotals?.total_transfer ?? s.total_transfer,
+                    total_davivienda: breakdown.dynamicTotals?.total_davivienda ?? s.total_davivienda,
+                    total_datafono: breakdown.dynamicTotals?.total_datafono ?? s.total_datafono,
+                    total_return: breakdown.dynamicTotals?.total_return ?? s.total_return,
+                    subtotal_method: breakdown.dynamicTotals?.subtotal_method ?? s.subtotal_method,
+                    total_method: breakdown.dynamicTotals?.total_method ?? s.total_method,
+                    subtotal: breakdown.dynamicTotals?.subtotal ?? s.subtotal,
+                    tax0: breakdown.dynamicTotals?.tax0 ?? s.tax0,
+                    tax5: breakdown.dynamicTotals?.tax5 ?? s.tax5,
+                    tax19: breakdown.dynamicTotals?.tax19 ?? s.tax19,
+                    total: breakdown.dynamicTotals?.total ?? s.total,
+
+                    cash: breakdown.cash || { payment: 0, credit: 0, total: 0 },
+                    transfer: breakdown.transfer || { payment: 0, credit: 0, total: 0 },
+                    datafono: breakdown.datafono || { payment: 0, credit: 0, total: 0 },
+                    davivienda: breakdown.davivienda || { payment: 0, credit: 0, total: 0 },
+
+                    totalSales: breakdown.totalSalesCount ?? 0,
+                    totalCreditNotes: breakdown.totalCreditNotesCount ?? 0,
+
                     opened_at: s.opened_at 
                         ? moment(s.opened_at).format("YYYY-MM-DD HH:mm A")
                         : null,
                     closed_at: s.closed_at 
                         ? moment(s.closed_at).format("YYYY-MM-DD HH:mm A")
-                        : null,
-                    totalSales: totalSales.count  
-                })
+                        : null
+                });
             }
-
 
             return { code: 200, data: sesiones };
 

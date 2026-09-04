@@ -45,6 +45,27 @@ function num(n) {
     return (typeof n === "number" && !isNaN(n) && isFinite(n)) ? n : 0;
 }
 
+/// -----------------------------------------------------------
+/// Determina el método de pago con mayor monto de la factura original
+/// -----------------------------------------------------------
+function getHighestPaymentMethod(originalInvoice) {
+    const paymentMethods = [
+        { key: "receipt_cash", amount: Number(originalInvoice?.receipt_cash) || 0 },
+        { key: "receipt_datafono", amount: Number(originalInvoice?.receipt_datafono) || 0 },
+        { key: "receipt_transfer", amount: Number(originalInvoice?.receipt_transfer) || 0 },
+        { key: "receipt_davivienda", amount: Number(originalInvoice?.receipt_davivienda) || 0 },
+    ];
+
+    let highest = paymentMethods[0];
+    for (let i = 1; i < paymentMethods.length; i++) {
+        if (paymentMethods[i].amount > highest.amount) {
+            highest = paymentMethods[i];
+        }
+    }
+
+    return highest.amount > 0 ? highest.key : "receipt_cash";
+}
+
 
 const CreditNoteSiigoService = {
     async CreatePOS (company) {
@@ -93,9 +114,19 @@ const CreditNoteSiigoService = {
                 //console.log("Factura Original", originalInvoice)
 
                 ///------------------------------
-                /// Totales de la nota
+                /// Totales de la nota y método de pago
                 ///------------------------------
                 const totals = calculateTotals(creditNote.items);
+                const highestMethod = getHighestPaymentMethod(originalInvoice);
+                const creditTotal = num(creditNote.total);
+
+                const paymentValues = {
+                    receipt_cash: 0,
+                    receipt_transfer: 0,
+                    receipt_davivienda: 0,
+                    receipt_datafono: 0,
+                    [highestMethod]: creditTotal
+                };
 
                 /// ------------------------------
                 /// 4. Insertar nota de crédito en sale_invoice
@@ -105,8 +136,9 @@ const CreditNoteSiigoService = {
                         company, type, reference_invoice, code,
                         sale_point, cash_session, seller, customer, customer_name, customer_cc, customer_address,
                         subtotal, tax0, tax5, tax19, total,
-                        receipt_cash, total_payment, reason, cufe, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        receipt_cash, receipt_transfer, receipt_davivienda, receipt_datafono,
+                        total_payment, reason, cufe, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         originalInvoice.company,
                         "credit-note",
@@ -123,9 +155,12 @@ const CreditNoteSiigoService = {
                         num(totals.tax0),
                         num(totals.tax5),
                         num(totals.tax19),
-                        num(creditNote.total),
-                        num(creditNote.total),
-                        num(creditNote.total),
+                        creditTotal,
+                        paymentValues.receipt_cash,
+                        paymentValues.receipt_transfer,
+                        paymentValues.receipt_davivienda,
+                        paymentValues.receipt_datafono,
+                        creditTotal,
                         creditNote.reason,
                         "No aplica",
                         created_at
@@ -237,6 +272,11 @@ const CreditNoteSiigoService = {
                 si.tax5,
                 si.tax19,
                 si.total,
+                si.receipt_cash,
+                si.receipt_transfer,
+                si.receipt_davivienda,
+                si.receipt_datafono,
+                si.total_payment,
                 si.reason,
                 si.status,
                 si.created_at,
